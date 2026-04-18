@@ -4,9 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>POHL Chapa y Pintura - Gestión</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#cc0000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="POHL Gestión">
+    
+    <!-- Web Manifest (Inline) -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlBPSEwgQ2hhcGEgeSBQaW50dXJhIC0gR2VzdGnDs24iLAogICJzaG9ydF9uYW1lIjogIlBPSEwgR2VzdGnDs24iLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2ZmZmZmZiIsCiAgInRoZW1lX2NvbG9yIjogIiNjYzAwMDAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL3BsYWNlaG9sZC5jby8xOTJ4MTkyL2NjMDAwMC9mZmZmZmYvcG5nP3RleHQ9UE9ITCIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIgogICAgfSwKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL3BsYWNlaG9sZC5jby81MTJ4NTEyL2NjMDAwMC9mZmZmZmYvcG5nP3RleHQ9UE9ITCIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgIC2InR5cGUiOiAiaW1hZ2UvcG5nIgogICAgfQogIF0KfQ==">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
         :root {
             --primary-red: #cc0000;
@@ -125,7 +136,6 @@
             object-fit: contain;
         }
 
-        /* Modal de confirmación */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -171,7 +181,7 @@
         <!-- LOGIN -->
         <div id="view-login" class="view active items-center justify-center px-8">
             <div class="w-64 mb-10">
-                <img src="img-removebg-preview.png" alt="POHL Logo" class="logo-img" onerror="this.src='https://placehold.co/600x240/000000/FFFFFF/png?text=POHL+LOGO'">
+                <img src="img-removebg-preview.png" alt="Logo" class="logo-img" onerror="this.src='https://placehold.co/600x240/000000/FFFFFF/png?text=POHL+LOGO'">
             </div>
             <div class="w-full space-y-4">
                 <div class="pohl-input-wrapper"><input type="text" id="login-user" placeholder="Usuario"></div>
@@ -184,7 +194,7 @@
         <div id="view-home" class="view">
             <header class="bg-black text-white p-3 flex justify-between items-center shrink-0">
                 <div class="h-12">
-                    <img src="img-removebg-preview.png" alt="POHL Logo" class="h-full w-auto" onerror="this.src='https://placehold.co/600x240/000000/FFFFFF/png?text=POHL+LOGO'">
+                    <img src="img-removebg-preview.png" alt="Logo" class="h-full w-auto" onerror="this.src='https://placehold.co/600x240/000000/FFFFFF/png?text=POHL+LOGO'">
                 </div>
                 <button onclick="logout()" class="text-[10px] border border-red-600 text-red-600 px-3 py-1 rounded-full font-bold uppercase">Cerrar Sesión</button>
             </header>
@@ -217,7 +227,15 @@
                     <div class="pohl-input-wrapper"><input type="number" id="f-num" placeholder="Nº"></div>
                     <div class="pohl-input-wrapper"><input type="date" id="f-date"></div>
                 </div>
-                <div class="pohl-input-wrapper"><input type="text" id="f-client" placeholder="Cliente / Vehículo"></div>
+
+                <div class="space-y-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Datos del Cliente y Vehículo</p>
+                    <div class="pohl-input-wrapper"><input type="text" id="f-client" placeholder="Nombre del Cliente"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="pohl-input-wrapper"><input type="text" id="f-vehicle" placeholder="Vehículo (Marca/Modelo)"></div>
+                        <div class="pohl-input-wrapper"><input type="text" id="f-domain" placeholder="Dominio (Patente)" style="text-transform: uppercase;"></div>
+                    </div>
+                </div>
                 
                 <div id="items-root" class="space-y-4"></div>
                 
@@ -250,10 +268,10 @@
                 <div class="flex justify-between items-start border-b-2 border-gray-100 pb-4 mb-6">
                     <div>
                         <div class="w-32 mb-2">
-                            <img src="img-removebg-preview.png" alt="POHL Logo" class="logo-img" onerror="this.src='https://placehold.co/600x240/000000/FFFFFF/png?text=POHL+LOGO'">
+                            <img src="img-removebg-preview.png" alt="Logo" class="logo-img" onerror="this.src='https://placehold.co/600x240/000000/FFFFFF/png?text=POHL+LOGO'">
                         </div>
                         <div class="text-[7px] text-gray-500 font-bold">
-                            <p class="text-black font-black uppercase leading-tight">Diego Raúl Pohl</p>
+                            <p class="text-black font-black uppercase leading-tight">Pohl Diego Raúl</p>
                             <p class="text-black font-black font-bold">CUIT: 23-30490683-9</p>
                             <p class="text-black font-black font-bold">Dirección: 1° de Mayo 1480, Federal - Entre Ríos</p>
                             <p class="text-black font-black font-bold">Celular: 3454-497008</p>
@@ -269,9 +287,21 @@
                     </div>
                 </div>
 
-                <div class="mb-4">
-                    <p class="text-[7px] font-black text-gray-400 uppercase">Cliente:</p>
-                    <p class="text-sm font-black text-gray-800 uppercase" id="d-client"></p>
+                <div class="mb-6 space-y-1">
+                    <div>
+                        <p class="text-[7px] font-black text-gray-400 uppercase">Cliente:</p>
+                        <p class="text-base font-black text-gray-900 uppercase leading-none" id="d-client"></p>
+                    </div>
+                    <div class="flex gap-4">
+                        <div>
+                            <p class="text-[7px] font-black text-gray-400 uppercase">Vehículo:</p>
+                            <p class="text-xs font-bold text-gray-700 uppercase" id="d-vehicle"></p>
+                        </div>
+                        <div>
+                            <p class="text-[7px] font-black text-gray-400 uppercase">Dominio:</p>
+                            <p class="text-xs font-bold text-gray-700 uppercase" id="d-domain"></p>
+                        </div>
+                    </div>
                 </div>
 
                 <table class="pdf-table">
@@ -316,6 +346,16 @@
     </div>
 
     <script>
+        // Registrando Service Worker básico para permitir PWA (Instalación)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `self.addEventListener('fetch', function(event) {});`;
+                const blob = new Blob([swCode], {type: 'application/javascript'});
+                const url = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(url).catch(err => console.log('SW registration failed:', err));
+            });
+        }
+
         let budgets = JSON.parse(localStorage.getItem('pohl_v6')) || [];
         let budgetToDelete = null;
         
@@ -356,6 +396,8 @@
             document.getElementById('f-num').value = last + 1;
             document.getElementById('f-date').valueAsDate = new Date();
             document.getElementById('f-client').value = "";
+            document.getElementById('f-vehicle').value = "";
+            document.getElementById('f-domain').value = "";
             document.getElementById('f-notes').value = "Válido por 15 días. Presupuesto sujeto a cambios sin previo aviso.";
             document.getElementById('items-root').innerHTML = "";
             addItem();
@@ -393,6 +435,8 @@
                 id: document.getElementById('f-num').value,
                 date: document.getElementById('f-date').value,
                 client: document.getElementById('f-client').value || 'Sin nombre',
+                vehicle: document.getElementById('f-vehicle').value || '-',
+                domain: document.getElementById('f-domain').value.toUpperCase() || '-',
                 notes: document.getElementById('f-notes').value,
                 items: [],
                 total: 0
@@ -429,6 +473,7 @@
                     <div onclick="viewDetail('${b.id}')" class="flex-1">
                         <span class="text-[7px] bg-red-600 text-white px-2 py-0.5 rounded font-black uppercase">REF ${b.id}</span>
                         <p class="font-black text-gray-800 uppercase text-sm mt-1">${b.client}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">${b.vehicle} - [ ${b.domain} ]</p>
                         <div class="flex items-center gap-3 mt-1">
                              <p class="font-black text-red-600 text-lg">$${b.total.toLocaleString('es-AR')}</p>
                              <p class="text-[8px] text-gray-400 font-bold uppercase">${formatDateDisplay(b.date)}</p>
@@ -441,7 +486,6 @@
             `).join('');
         }
 
-        // Funciones de Eliminación
         function openDeleteModal(id) {
             budgetToDelete = id;
             document.getElementById('delete-modal').style.display = 'flex';
@@ -468,6 +512,8 @@
             document.getElementById('d-num').innerText = activeB.id;
             document.getElementById('d-date').innerText = formatDateDisplay(activeB.date);
             document.getElementById('d-client').innerText = activeB.client;
+            document.getElementById('d-vehicle').innerText = activeB.vehicle;
+            document.getElementById('d-domain').innerText = activeB.domain;
             document.getElementById('d-notes').innerText = activeB.notes;
             document.getElementById('d-total').innerText = activeB.total.toLocaleString('es-AR');
             
@@ -515,11 +561,22 @@
         }
 
         function shareWhatsApp() {
-            const t = `🛠️ *POHL CHAPA Y PINTURA*\n` +
+            let itemsText = "";
+            activeB.items.forEach(i => {
+                itemsText += `• ${i.c}x ${i.desc.toUpperCase()} ($${i.p.toLocaleString('es-AR')}) = *$${i.sub.toLocaleString('es-AR')}*\n`;
+            });
+
+            const t = `🛠️ *POHL CHAPA Y PINTURA*\n\n` +
+                      `📄 *Presupuesto Nº:* ${activeB.id}\n` +
                       `📅 *Fecha:* ${formatDateDisplay(activeB.date)}\n` +
-                      `📄 *Nº Presupuesto:* ${activeB.id}\n` +
-                      `👤 *Cliente:* ${activeB.client.toUpperCase()}\n\n` +
-                      `💰 *TOTAL: $${activeB.total.toLocaleString('es-AR')}*`;
+                      `👤 *Cliente:* ${activeB.client.toUpperCase()}\n` +
+                      `🚗 *Vehículo:* ${activeB.vehicle.toUpperCase()}\n` +
+                      `🆔 *Dominio:* ${activeB.domain.toUpperCase()}\n\n` +
+                      `📋 *DETALLE DEL TRABAJO:*\n` +
+                      `${itemsText}\n` +
+                      `💰 *TOTAL: $${activeB.total.toLocaleString('es-AR')}*\n\n` +
+                      `📝 *Obs:* ${activeB.notes}`;
+
             window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
         }
 

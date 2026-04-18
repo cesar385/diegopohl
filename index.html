@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>POHL Chapa y Pintura - Gestión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary-red: #cc0000;
+            --table-border: #4b5563;
+        }
+
+        body, html {
+            height: 100dvh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #f3f4f6;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            width: 100%;
+            position: relative;
+            background: white;
+        }
+
+        .pohl-input-wrapper {
+            background: #fff;
+            border: 2px solid #e5e7eb;
+            transform: skewX(-6deg);
+            border-radius: 6px;
+        }
+        .pohl-input-wrapper input {
+            transform: skewX(6deg);
+            width: 100%;
+            padding: 14px;
+            border: none;
+            outline: none;
+            font-size: 16px;
+        }
+
+        .btn-action {
+            background: linear-gradient(180deg, #444 0%, #000 100%);
+            color: #fff;
+            font-weight: 900;
+            text-transform: uppercase;
+            border-bottom: 4px solid #900;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .scroll-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 140px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .pdf-table th, .pdf-table td {
+            border: 1px solid var(--table-border);
+            padding: 8px;
+        }
+        .pdf-table th { background: #f3f4f6; font-weight: 900; }
+
+        .price-align-center {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .view { display: none; flex-direction: column; height: 100dvh; }
+        .view.active { display: flex; }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 2px solid #eee;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 2000;
+            display: none;
+        }
+
+        .logo-img {
+            max-width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+
+        /* Modal de confirmación */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            padding: 20px;
+        }
+        .modal-card {
+            background: white;
+            padding: 24px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 320px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast" class="notification"></div>
+
+    <!-- Modal para Confirmar Eliminación -->
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="text-red-600 mb-4">
+                <i class="fas fa-exclamation-triangle fa-3x"></i>
+            </div>
+            <h2 class="font-black text-xl mb-2">¿ELIMINAR?</h2>
+            <p class="text-gray-500 text-sm mb-6">Esta acción no se puede deshacer. Se borrará el presupuesto permanentemente.</p>
+            <div class="flex flex-col gap-2">
+                <button id="confirm-delete-btn" class="w-full py-3 bg-red-600 text-white font-black rounded-xl uppercase">Sí, Eliminar</button>
+                <button onclick="closeDeleteModal()" class="w-full py-3 bg-gray-100 text-gray-400 font-black rounded-xl uppercase">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-shell">
+        
+        <!-- LOGIN -->
+        <div id="view-login" class="view active items-center justify-center px-8">
+            <div class="w-64 mb-10">
+                <img src="img-removebg-preview.png" alt="POHL Logo" class="logo-img" onerror="this.src='https://placehold.co/600x240/000000/FFFFFF/png?text=POHL+LOGO'">
+            </div>
+            <div class="w-full space-y-4">
+                <div class="pohl-input-wrapper"><input type="text" id="login-user" placeholder="Usuario"></div>
+                <div class="pohl-input-wrapper"><input type="password" id="login-pass" placeholder="Contraseña"></div>
+                <button onclick="doLogin()" class="w-full py-4 btn-action text-lg mt-2">ENTRAR</button>
+            </div>
+        </div>
+
+        <!-- HOME -->
+        <div id="view-home" class="view">
+            <header class="bg-black text-white p-3 flex justify-between items-center shrink-0">
+                <div class="h-12">
+                    <img src="img-removebg-preview.png" alt="POHL Logo" class="h-full w-auto" onerror="this.src='https://placehold.co/600x240/000000/FFFFFF/png?text=POHL+LOGO'">
+                </div>
+                <button onclick="logout()" class="text-[10px] border border-red-600 text-red-600 px-3 py-1 rounded-full font-bold uppercase">Cerrar Sesión</button>
+            </header>
+            
+            <div class="scroll-content bg-gray-50">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Historial de Trabajos</h3>
+                    <span class="text-[10px] font-bold text-gray-300 uppercase" id="budget-count"></span>
+                </div>
+                <div id="list-container" class="space-y-3"></div>
+            </div>
+
+            <button onclick="navTo('form')" class="fixed bottom-24 right-6 w-16 h-16 bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center z-50">
+                <i class="fas fa-plus fa-lg"></i>
+            </button>
+        </div>
+
+        <!-- FORMULARIO -->
+        <div id="view-form" class="view bg-white">
+            <header class="p-4 border-b flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <button onclick="navTo('home')" class="text-gray-400 p-2"><i class="fas fa-arrow-left"></i></button>
+                    <span class="font-black text-xs uppercase tracking-tighter">Nuevo Presupuesto</span>
+                </div>
+                <button onclick="saveBudget()" class="bg-red-600 text-white text-[10px] font-black px-4 py-2 rounded-lg uppercase shadow-sm">Guardar</button>
+            </header>
+
+            <div class="scroll-content space-y-6">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="pohl-input-wrapper"><input type="number" id="f-num" placeholder="Nº"></div>
+                    <div class="pohl-input-wrapper"><input type="date" id="f-date"></div>
+                </div>
+                <div class="pohl-input-wrapper"><input type="text" id="f-client" placeholder="Cliente / Vehículo"></div>
+                
+                <div id="items-root" class="space-y-4"></div>
+                
+                <button onclick="addItem()" class="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 text-[10px] font-bold uppercase active:bg-gray-100">+ Agregar Trabajo</button>
+
+                <div class="pohl-input-wrapper"><input type="text" id="f-notes" placeholder="Observaciones y validez"></div>
+            </div>
+
+            <div class="bottom-bar">
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-black text-gray-400 uppercase">Total Final</span>
+                    <span class="text-xl font-black text-red-600" id="form-total">$ 0</span>
+                </div>
+                <button onclick="saveBudget()" class="px-8 py-4 btn-action">
+                    <i class="fas fa-save"></i> GUARDAR
+                </button>
+            </div>
+        </div>
+
+        <!-- DETALLE PDF -->
+        <div id="view-detail" class="view bg-white">
+            <header class="p-4 border-b flex items-center justify-between no-pdf shrink-0">
+                <button onclick="navTo('home')" class="text-gray-400 flex items-center gap-2 font-bold text-xs uppercase">
+                    <i class="fas fa-chevron-left"></i> Volver al Inicio
+                </button>
+                <span class="font-black text-[10px] text-gray-300">MODO PREVISUALIZACIÓN</span>
+            </header>
+
+            <div id="pdf-content" class="flex-1 overflow-y-auto bg-white p-6">
+                <div class="flex justify-between items-start border-b-2 border-gray-100 pb-4 mb-6">
+                    <div>
+                        <div class="w-32 mb-2">
+                            <img src="img-removebg-preview.png" alt="POHL Logo" class="logo-img" onerror="this.src='https://placehold.co/600x240/000000/FFFFFF/png?text=POHL+LOGO'">
+                        </div>
+                        <div class="text-[7px] text-gray-500 font-bold uppercase leading-tight">
+                            <p class="text-black font-black">Diego Raúl Pohl</p>
+                            <p>Calle Falsa 123 - Ciudad</p>
+                            <p>CUIT: 20-XXXXXXXX-X</p>
+                            <p>Cel: +54 9 11 0000-0000</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="bg-gray-100 border border-gray-200 text-gray-800 px-3 py-1 rounded mb-1">
+                            <p class="text-[6px] opacity-70 uppercase font-black">Nº Presupuesto</p>
+                            <p class="text-lg font-black" id="d-num">0000</p>
+                        </div>
+                        <p class="text-[9px] font-bold text-gray-400" id="d-date"></p>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-[7px] font-black text-gray-400 uppercase">Cliente:</p>
+                    <p class="text-sm font-black text-gray-800 uppercase" id="d-client"></p>
+                </div>
+
+                <table class="pdf-table">
+                    <thead>
+                        <tr>
+                            <th class="text-left">Descripción</th>
+                            <th class="w-20 text-center">Cantidad</th>
+                            <th class="w-32 text-center">Precio Unitario</th>
+                            <th class="w-32 text-center">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="d-table"></tbody>
+                </table>
+
+                <div class="flex justify-end mt-4">
+                    <div class="w-48 p-3 bg-gray-100 border border-gray-200 text-gray-800 rounded-lg">
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-xs uppercase font-black text-black">TOTAL</span>
+                            <div class="flex gap-2 text-black">
+                                <span class="text-lg font-black">$</span>
+                                <span id="d-total" class="text-xl font-black">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 border-t pt-4">
+                    <p class="text-[7px] font-black text-gray-400 uppercase mb-1">Observaciones:</p>
+                    <p class="text-[9px] text-gray-600 italic leading-tight" id="d-notes"></p>
+                </div>
+            </div>
+
+            <div class="bottom-bar no-pdf">
+                <button onclick="sharePDF()" class="flex-1 mr-2 py-4 btn-action">
+                    <i class="fas fa-file-pdf"></i> GENERAR PDF
+                </button>
+                <button onclick="shareWhatsApp()" class="flex-1 ml-2 py-4 bg-green-600 text-white font-black rounded-xl flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fab fa-whatsapp text-lg"></i> WHATSAPP
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let budgets = JSON.parse(localStorage.getItem('pohl_v6')) || [];
+        let budgetToDelete = null;
+        
+        function formatDateDisplay(dateStr) {
+            if(!dateStr) return "";
+            const parts = dateStr.split('-');
+            if(parts.length !== 3) return dateStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        function doLogin() {
+            const u = document.getElementById('login-user').value;
+            const p = document.getElementById('login-pass').value;
+            if(u === "195599" && p === "Diego2026") navTo('home');
+            else showToast("Clave incorrecta");
+        }
+
+        function logout() {
+            navTo('login');
+            showToast("Sesión cerrada");
+        }
+
+        function navTo(screen) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + screen).classList.add('active');
+            if(screen === 'home') renderList();
+            if(screen === 'form') resetForm();
+        }
+
+        function resetForm() {
+            const last = budgets.length > 0 ? Math.max(...budgets.map(b => parseInt(b.id))) : 2000;
+            document.getElementById('f-num').value = last + 1;
+            document.getElementById('f-date').valueAsDate = new Date();
+            document.getElementById('f-client').value = "";
+            document.getElementById('f-notes').value = "Válido por 15 días. Presupuesto sujeto a cambios sin previo aviso.";
+            document.getElementById('items-root').innerHTML = "";
+            addItem();
+            updateTotal();
+        }
+
+        function addItem() {
+            const d = document.createElement('div');
+            d.className = "p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3";
+            d.innerHTML = `
+                <div class="pohl-input-wrapper"><input type="text" class="it-desc" placeholder="Descripción del trabajo"></div>
+                <div class="flex gap-2">
+                    <div class="flex-1 pohl-input-wrapper"><input type="number" class="it-cant text-center" value="1" onchange="updateTotal()"></div>
+                    <div class="flex-[2] pohl-input-wrapper"><input type="number" class="it-price text-right" placeholder="Precio Unitario $" onkeyup="updateTotal()"></div>
+                    <button onclick="this.parentElement.parentElement.remove();updateTotal()" class="w-12 h-12 text-red-500"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            document.getElementById('items-root').appendChild(d);
+            setTimeout(() => d.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+        }
+
+        function updateTotal() {
+            let total = 0;
+            document.querySelectorAll('#items-root > div').forEach(el => {
+                const c = parseFloat(el.querySelector('.it-cant').value) || 0;
+                const p = parseFloat(el.querySelector('.it-price').value) || 0;
+                total += (c * p);
+            });
+            document.getElementById('form-total').innerText = `$ ${total.toLocaleString('es-AR')}`;
+            return total;
+        }
+
+        function saveBudget() {
+            const b = {
+                id: document.getElementById('f-num').value,
+                date: document.getElementById('f-date').value,
+                client: document.getElementById('f-client').value || 'Sin nombre',
+                notes: document.getElementById('f-notes').value,
+                items: [],
+                total: 0
+            };
+
+            document.querySelectorAll('#items-root > div').forEach(el => {
+                const desc = el.querySelector('.it-desc').value;
+                const c = parseFloat(el.querySelector('.it-cant').value) || 0;
+                const p = parseFloat(el.querySelector('.it-price').value) || 0;
+                if(desc) { b.items.push({ desc, c, p, sub: c*p }); b.total += c*p; }
+            });
+
+            if(b.items.length === 0) return showToast("Faltan datos");
+            
+            budgets.unshift(b);
+            localStorage.setItem('pohl_v6', JSON.stringify(budgets));
+            showToast("Guardado con éxito");
+            navTo('home');
+        }
+
+        function renderList() {
+            const cont = document.getElementById('list-container');
+            const counter = document.getElementById('budget-count');
+            
+            counter.innerText = budgets.length > 0 ? `${budgets.length} registros` : "";
+
+            if(budgets.length === 0) {
+                cont.innerHTML = `<div class="py-20 text-center opacity-20 italic">No hay registros guardados</div>`;
+                return;
+            }
+
+            cont.innerHTML = budgets.map(b => `
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center active:bg-gray-50 transition-all relative">
+                    <div onclick="viewDetail('${b.id}')" class="flex-1">
+                        <span class="text-[7px] bg-red-600 text-white px-2 py-0.5 rounded font-black uppercase">REF ${b.id}</span>
+                        <p class="font-black text-gray-800 uppercase text-sm mt-1">${b.client}</p>
+                        <div class="flex items-center gap-3 mt-1">
+                             <p class="font-black text-red-600 text-lg">$${b.total.toLocaleString('es-AR')}</p>
+                             <p class="text-[8px] text-gray-400 font-bold uppercase">${formatDateDisplay(b.date)}</p>
+                        </div>
+                    </div>
+                    <button onclick="openDeleteModal('${b.id}')" class="p-3 text-gray-300 hover:text-red-600 transition-colors">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Funciones de Eliminación
+        function openDeleteModal(id) {
+            budgetToDelete = id;
+            document.getElementById('delete-modal').style.display = 'flex';
+        }
+
+        function closeDeleteModal() {
+            budgetToDelete = null;
+            document.getElementById('delete-modal').style.display = 'none';
+        }
+
+        document.getElementById('confirm-delete-btn').onclick = function() {
+            if(budgetToDelete) {
+                budgets = budgets.filter(b => b.id != budgetToDelete);
+                localStorage.setItem('pohl_v6', JSON.stringify(budgets));
+                renderList();
+                showToast("Presupuesto eliminado");
+                closeDeleteModal();
+            }
+        };
+
+        let activeB = null;
+        function viewDetail(id) {
+            activeB = budgets.find(x => x.id == id);
+            document.getElementById('d-num').innerText = activeB.id;
+            document.getElementById('d-date').innerText = formatDateDisplay(activeB.date);
+            document.getElementById('d-client').innerText = activeB.client;
+            document.getElementById('d-notes').innerText = activeB.notes;
+            document.getElementById('d-total').innerText = activeB.total.toLocaleString('es-AR');
+            
+            document.getElementById('d-table').innerHTML = activeB.items.map(i => `
+                <tr>
+                    <td class="font-bold uppercase text-gray-700">${i.desc}</td>
+                    <td class="text-center font-bold">${i.c}</td>
+                    <td><div class="price-align-center"><span>$</span><span>${i.p.toLocaleString('es-AR')}</span></div></td>
+                    <td><div class="price-align-center font-black text-gray-900"><span>$</span><span>${i.sub.toLocaleString('es-AR')}</span></div></td>
+                </tr>
+            `).join('');
+            navTo('detail');
+        }
+
+        async function sharePDF() {
+            showToast("Creando PDF...");
+            const area = document.getElementById('pdf-content');
+            const opt = {
+                margin: 5,
+                filename: `POHL_Presupuesto_${activeB.id}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 3, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a5', orientation: 'portrait' }
+            };
+
+            try {
+                const pdfBlob = await html2pdf().set(opt).from(area).output('blob');
+                const file = new File([pdfBlob], `POHL_${activeB.id}.pdf`, { type: 'application/pdf' });
+
+                if (navigator.share && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: `Presupuesto POHL`,
+                        text: `Envío presupuesto adjunto.`
+                    });
+                } else {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(pdfBlob);
+                    link.download = `POHL_${activeB.id}.pdf`;
+                    link.click();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function shareWhatsApp() {
+            const t = `🛠️ *POHL CHAPA Y PINTURA*\n` +
+                      `📅 *Fecha:* ${formatDateDisplay(activeB.date)}\n` +
+                      `📄 *Nº Presupuesto:* ${activeB.id}\n` +
+                      `👤 *Cliente:* ${activeB.client.toUpperCase()}\n\n` +
+                      `💰 *TOTAL: $${activeB.total.toLocaleString('es-AR')}*`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
+        }
+
+        window.onload = () => { if(budgets.length > 0) renderList(); };
+    </script>
+</body>
+</html>

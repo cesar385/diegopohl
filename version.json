@@ -1,9 +1,8 @@
 {
-  "version": "2.2.0",
+  "version": "2.2.1",
   "fecha": "2026-11-24",
   "notas": [
-    "Contraseñas protegidas y recuperación con código.",
-    "Mejor uso en celulares e iPhone.",
+    "Ya no se obliga a cambiar la contraseña ni a usar un formato determinado.",
     "Tus datos se conservan."
   ]
 }

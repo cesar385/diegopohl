@@ -166,7 +166,7 @@
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.2.1';
 const SCHEMA = 1;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -242,8 +242,8 @@ function save() {
   catch (e) { toast('⚠️ No se pudo guardar: memoria llena. Descargá una copia de seguridad.', 6000); return false; }
 }
 /* Contraseñas: PBKDF2-SHA256 con sal aleatoria por usuario (210.000 vueltas).
-   En el código no hay ninguna contraseña escrita: la cuenta inicial trae solo su huella,
-   y en el primer ingreso obliga a elegir una contraseña nueva. */
+   En el código no hay ninguna contraseña escrita: la cuenta inicial trae solo su huella.
+   No se obliga a cambiarla ni se exige un largo o formato determinado. */
 const PBKDF_IT = 210000;
 const DEFAULT_PWD = {salt: 'U1Sgx9agcw/6dQEyjUFXwg==', it: 210000, hash: 'JiWx1WDW5FqZPOZm9CT1dVjdN36fvMktrZu9C4/9KDM='};
 const toB64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -259,16 +259,10 @@ async function checkPwd(u, pass) {
   if (u.pass && sameStr(await sha(pass), u.pass)) { u.pwd = await makePwd(pass); delete u.pass; save(); return true; } // versión 2.0: se mejora al entrar
   return false;
 }
-async function isDefaultPwd(pass) { return sameStr(await pbkdf(pass, DEFAULT_PWD.salt, DEFAULT_PWD.it), DEFAULT_PWD.hash); }
-function pwdProblem(p, user) {
-  if (p.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
-  if (!/[a-zA-ZñÑ]/.test(p) || !/\d/.test(p)) return 'Usá letras y números';
-  if (user && p.toLowerCase().includes(String(user).toLowerCase())) return 'No puede contener el usuario';
-  return '';
-}
+function pwdProblem(p) { return p ? '' : 'Escribí una contraseña'; }
 async function ensureAdmin() {
-  if (!DB.users.length) DB.users.push({id: 'u_admin', user: '195599', pwd: {...DEFAULT_PWD}, mustChange: true, name: 'Diego Pohl', role: 'admin', comision: 0});
-  DB.users.forEach(u => { if (u.pwd && u.pwd.hash === DEFAULT_PWD.hash) u.mustChange = true; });
+  if (!DB.users.length) DB.users.push({id: 'u_admin', user: '195599', pwd: {...DEFAULT_PWD}, name: 'Diego Pohl', role: 'admin', comision: 0});
+  DB.users.forEach(u => { delete u.mustChange; });
 }
 function readLegacy() { try { const l = JSON.parse(localStorage.getItem(LEGACY_KEY)); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
 
@@ -337,7 +331,6 @@ function start() {
   if (seen && seen !== APP_VERSION) setTimeout(() => toast('✅ Sistema actualizado a la versión ' + APP_VERSION + '. Tus datos están intactos.', 5000), 600);
   let s = null; try { s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) {}
   ME = s && s.exp > Date.now() && DB.users.find(u => u.id === s.id) || null;
-  if (ME && ME.mustChange) ME = null;
   ME ? showApp() : showLogin();
 }
 
@@ -424,19 +417,18 @@ async function doLogin() {
   }
   localStorage.removeItem(TRIES_KEY);
   $('#l-pass').value = '';
-  if (user.mustChange || await isDefaultPwd(p)) { user.mustChange = true; return forceNewPwd(user); }
   ME = user; touchSession(); showApp();
 }
 function forceNewPwd(user, viaReset) {
   modal(`<div class="p-6 sm:p-8"><div class="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4"><i class="fas fa-key fa-lg"></i></div>
-    <p class="eyebrow">${viaReset ? 'Recuperación' : 'Seguridad'}</p><h2 class="text-xl font-extrabold mt-1">Elegí una contraseña nueva</h2>
-    <p class="text-sm text-slate-500 mt-2">${viaReset ? 'Código válido.' : 'Por seguridad, la contraseña inicial tiene que cambiarse.'} Usuario: <b class="font-mono">${esc(user.user)}</b></p>
-    <div class="space-y-3 mt-5"><input id="np1" class="inp" type="password" autocomplete="new-password" placeholder="Nueva contraseña (mín. 8, letras y números)"><input id="np2" class="inp" type="password" autocomplete="new-password" placeholder="Repetila">
+    <p class="eyebrow">Recuperación</p><h2 class="text-xl font-extrabold mt-1">Elegí una contraseña nueva</h2>
+    <p class="text-sm text-slate-500 mt-2">Código válido. Usuario: <b class="font-mono">${esc(user.user)}</b></p>
+    <div class="space-y-3 mt-5"><input id="np1" class="inp" type="password" autocomplete="new-password" placeholder="Nueva contraseña"><input id="np2" class="inp" type="password" autocomplete="new-password" placeholder="Repetila">
     <button class="btn btn-p w-full" id="np-ok">Guardar y entrar</button><button class="btn btn-l w-full" onclick="closeModal()">Cancelar</button></div></div>`, {locked: true});
   $('#np-ok').onclick = async () => {
-    const a = $('#np1').value, b = $('#np2').value, pr = pwdProblem(a, user.user);
-    if (pr) return toast(pr); if (a !== b) return toast('Las contraseñas no coinciden'); if (await isDefaultPwd(a)) return toast('Tiene que ser distinta a la inicial');
-    user.pwd = await makePwd(a); delete user.pass; delete user.mustChange; save();
+    const a = $('#np1').value, b = $('#np2').value, pr = pwdProblem(a);
+    if (pr) return toast(pr); if (a !== b) return toast('Las contraseñas no coinciden');
+    user.pwd = await makePwd(a); delete user.pass; save();
     closeModal(); ME = user; touchSession(); showApp(); toast('Contraseña actualizada');
   };
 }
@@ -1304,7 +1296,7 @@ function userModal(id) {
   const u = id ? DB.users.find(x => x.id === id) : {name: '', user: '', role: 'tecnico', comision: 0};
   modal(`${mHead(id ? 'Editar usuario' : 'Nuevo empleado', 'Usuarios')}<div class="p-5 space-y-3">
     <input id="u-name" class="inp" placeholder="Nombre" value="${esc(u.name)}"><input id="u-user" class="inp" placeholder="Usuario para entrar" value="${esc(u.user)}">
-    <input id="u-pass" class="inp" type="password" autocomplete="new-password" placeholder="${id ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña (mín. 8, letras y números)'}">
+    <input id="u-pass" class="inp" type="password" autocomplete="new-password" placeholder="${id ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña'}">
     <div class="grid grid-cols-2 gap-3"><select id="u-role" class="inp" ${id === ME.id ? 'disabled' : ''}><option value="tecnico" ${u.role === 'tecnico' ? 'selected' : ''}>Técnico</option><option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrador</option></select>
     <div><input id="u-com" class="inp" type="number" step="any" value="${num(u.comision)}" placeholder="% comisión"><p class="text-[10px] text-slate-400 mt-1">% sobre la mano de obra</p></div></div>
     <div class="flex gap-2">${id && id !== ME.id ? `<button class="btn btn-l text-red-600" onclick="delUser('${id}')"><i class="fas fa-trash"></i></button>` : ''}<button class="btn btn-p flex-1" onclick="saveUser('${id || ''}')">Guardar</button></div></div>`);
@@ -1312,9 +1304,8 @@ function userModal(id) {
 async function saveUser(id) {
   const d = {name: $('#u-name').value.trim(), user: $('#u-user').value.trim(), role: $('#u-role').value, comision: num($('#u-com').value)}; const p = $('#u-pass').value;
   if (!d.name || !d.user) return toast('Completá nombre y usuario');
-  if (p) { const pr = pwdProblem(p, d.user); if (pr) return toast(pr); }
-  if (DB.users.some(x => x.user === d.user && x.id !== id)) return toast('Ese usuario ya existe');
-  if (id) { const u = DB.users.find(x => x.id === id); if (id === ME.id) d.role = u.role; Object.assign(u, d); if (p) { u.pwd = await makePwd(p); delete u.pass; delete u.mustChange; } }
+    if (DB.users.some(x => x.user === d.user && x.id !== id)) return toast('Ese usuario ya existe');
+  if (id) { const u = DB.users.find(x => x.id === id); if (id === ME.id) d.role = u.role; Object.assign(u, d); if (p) { u.pwd = await makePwd(p); delete u.pass; } }
   else { if (!p) return toast('Falta la contraseña'); DB.users.push({id: uid(), ...d, pwd: await makePwd(p)}); }
   save(); closeModal(); render(); toast('Usuario guardado');
 }

@@ -34,7 +34,7 @@ y **no se borran**; además se guarda una copia en `pohl_v6_respaldo`.
 
 ## Seguridad
 - Contraseñas con PBKDF2-SHA256 (210.000 vueltas) y sal por usuario. No hay contraseñas en el código.
-- La contraseña inicial obliga a cambiarse en el primer ingreso. 5 intentos fallidos bloquean (5 min, y se duplica).
+- No se obliga a cambiar la contraseña ni a cumplir un formato. 5 intentos fallidos bloquean (5 min, y se duplica).
 - La sesión vence tras 12 h sin uso. Recuperación de contraseña con código firmado desde el panel (24 h, un uso).
 - Content-Security-Policy, sin referrer y todas las librerías servidas desde `vendor/`.
 

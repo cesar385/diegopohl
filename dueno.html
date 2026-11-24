@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="vendor/fa/css/fontawesome.min.css">
 <link rel="stylesheet" href="vendor/fa/css/solid.min.css">
 <link rel="stylesheet" href="vendor/fa/css/brands.min.css">
+<script src="vendor/qrcode.min.js" defer></script>
 <style>
   html{-webkit-text-size-adjust:100%}
   body{font-family:Inter,system-ui,sans-serif;background:#0b1220;color:#0f172a;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
@@ -160,6 +161,7 @@
           <a class="btn b-l w-full" href="./" target="_blank" rel="noopener"><i class="fas fa-eye"></i> Ver el sistema de Diego</a>
           <button class="btn b-l w-full" onclick="changeAccess()"><i class="fas fa-user-gear"></i> Cambiar mi usuario o contraseña</button>
         </div>
+        <div class="card p-5 space-y-2" id="nube-card"></div>
         <div class="card p-5 space-y-2">
           <p class="lbl mb-1">Recuperar contraseña de Diego</p>
           <p class="text-xs text-slate-500">Si Diego se olvida la contraseña, en el sistema toca «¿Olvidaste la contraseña?» y te manda un número de pedido. Generá el código acá (vale 24 h, un solo uso).</p>
@@ -212,10 +214,10 @@ const rnd = n => crypto.getRandomValues(new Uint8Array(n));
 const toB = u => btoa(String.fromCharCode(...new Uint8Array(u))), fromB = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function deriveKey(secret, salt, it) { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'PBKDF2', false, ['deriveKey']); return crypto.subtle.deriveKey({name: 'PBKDF2', hash: 'SHA-256', salt, iterations: it}, k, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']); }
 const credSecret = (u, p) => 'pohl-dueno|' + u.trim().toLowerCase() + '|' + p;
-let USER = null, CRED = null;
+let USER = null, CRED = null, NUBE = null;
 async function sealAccess() {
   const salt = rnd(16), iv = rnd(12);
-  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, await deriveKey(CRED, salt, ITER), new TextEncoder().encode(JSON.stringify({usuario: USER, token: TOKEN, llave: PRIV, repo: repo()})));
+  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, await deriveKey(CRED, salt, ITER), new TextEncoder().encode(JSON.stringify({usuario: USER, token: TOKEN, llave: PRIV, repo: repo(), nube: NUBE})));
   return JSON.stringify({v: 2, it: ITER, salt: toB(salt), iv: toB(iv), ct: toB(ct)});
 }
 async function openAccess(blob, secret) { const v = JSON.parse(blob); const pt = await crypto.subtle.decrypt({name: 'AES-GCM', iv: fromB(v.iv)}, await deriveKey(secret, fromB(v.salt), v.it || 310000), fromB(v.ct)); return JSON.parse(new TextDecoder().decode(pt)); }
@@ -237,7 +239,7 @@ async function login() {
   $('#li-btn').disabled = false; $('#li-btn').innerHTML = 'Entrar <i class="fas fa-arrow-right"></i>';
   if (!d) { $('#li-pass').value = ''; return toast(failTry() ? 'Demasiados intentos: bloqueado 10 min' : 'Usuario o contraseña incorrectos'); }
   localStorage.removeItem(TRIES);
-  TOKEN = d.token; PRIV = d.llave; USER = d.usuario; CRED = secret; if (d.repo) localStorage.setItem(RP, d.repo);
+  TOKEN = d.token; PRIV = d.llave; USER = d.usuario; CRED = secret; NUBE = d.nube || null; if (d.repo) localStorage.setItem(RP, d.repo);
   $('#li-pass').value = ''; $('#v-login').classList.add('hidden');
   try { await load(); show(); } catch (e) { toast(e.message + ' — si cambiaste el token, tocá «configurar de nuevo».', 9000); $('#v-login').classList.remove('hidden'); }
 }
@@ -382,7 +384,7 @@ function fromNeto() { const q = num($('#c-quiero').value), t = num($('#c-tasa').
 function show() {
   $('#v-login').classList.add('hidden'); $('#v-setup').classList.add('hidden'); $('#v-panel').classList.remove('hidden'); $('#btn-out').classList.remove('hidden');
   $('#repo-name').textContent = repo();
-  $('#key-card').innerHTML = keyCard();
+  $('#key-card').innerHTML = keyCard(); drawNube();
   const st = state(), h = hist(), year = String(new Date().getFullYear());
   const tot = h.filter(p => p.fecha.startsWith(year)).reduce((a, p) => a + num(p.monto), 0), totNeto = h.filter(p => p.fecha.startsWith(year)).reduce((a, p) => a + num(p.neto ?? neto(p.monto)), 0);
   $('#stats').innerHTML = [
@@ -401,6 +403,41 @@ function show() {
   $('#btn-susp').innerHTML = LIC.estado === 'suspendido' ? '<i class="fas fa-unlock"></i> Reactivar el sistema' : '<i class="fas fa-lock"></i> Suspender ahora';
   $('#btn-susp').className = 'btn w-full ' + (LIC.estado === 'suspendido' ? 'b-g' : 'b-r');
   $('#hist').innerHTML = h.length ? h.slice().reverse().map(p => `<div class="flex justify-between gap-2 py-2 border-b last:border-0"><div class="min-w-0"><p class="font-semibold">${fd(p.fecha)} · ${esc(p.medio)}</p><p class="text-xs text-slate-400 truncate">${esc(p.periodo)}${p.ref ? ' · op. ' + esc(p.ref) : ''}</p></div><div class="text-right"><b>${money(p.monto)}</b><p class="text-[11px] text-slate-400">neto ${money(p.neto ?? neto(p.monto))}</p></div></div>`).join('') : '<p class="text-slate-400">Todavía no registraste pagos.</p>';
+}
+/* ---------- nube del taller (repo privado con los datos de Diego, cifrados) ---------- */
+const nubeLink = () => location.origin + location.pathname.replace(/[^/]*$/, '') + '#vincular=' + b64uStr(JSON.stringify(NUBE));
+function drawNube() {
+  const el = $('#nube-card'); if (!el) return;
+  if (NUBE) { el.innerHTML = `<p class="lbl mb-1"><i class="fas fa-cloud mr-1"></i>Nube del taller</p>
+    <p class="text-xs text-slate-500">Repositorio privado <code>${esc(NUBE.r)}</code>. Mandale a Diego el link y abrilo en cada dispositivo donde quieran ver los datos.</p>
+    <div class="flex justify-center"><div id="nube-qr" class="p-2 bg-white border rounded-xl"></div></div>
+    <button class="btn b-l w-full" onclick="navigator.clipboard.writeText(nubeLink()).then(()=>toast('Link copiado'))"><i class="fas fa-copy"></i> Copiar link de vinculación</button>
+    <button class="btn b-g w-full" onclick="openWA(LIC.telefonoCliente,'Hola Diego! Abrí este link en cada celular o computadora donde quieras ver los datos del taller (no lo compartas con nadie):\\n'+nubeLink())"><i class="fab fa-whatsapp"></i> Enviar link a Diego</button>
+    <details class="text-xs text-slate-500"><summary class="underline cursor-pointer">Cambiar el token de la nube</summary><input id="nb-tok" class="inp font-mono mt-2" type="password" placeholder="github_pat_… nuevo"><button class="btn b-l w-full mt-2" onclick="saveNube(true)">Guardar token nuevo</button><p class="mt-1">La clave de cifrado no cambia; después reenviá el link a cada dispositivo.</p></details>`;
+    try { new QRCode($('#nube-qr'), {text: nubeLink(), width: 180, height: 180, correctLevel: QRCode.CorrectLevel.L}); } catch (e) { $('#nube-qr').remove(); }
+    return; }
+  el.innerHTML = `<p class="lbl mb-1"><i class="fas fa-cloud mr-1"></i>Nube del taller</p>
+    <p class="text-xs text-slate-500">Para que los datos de Diego se vean en todos sus dispositivos:</p>
+    <ol class="steps text-xs text-slate-600 list-decimal pl-5">
+      <li><a class="text-sky-600 underline" target="_blank" rel="noopener" href="https://github.com/new?name=diegopohl-datos&visibility=private">Creá un repositorio <b>privado</b></a> llamado <code>diegopohl-datos</code>.</li>
+      <li><a class="text-sky-600 underline" target="_blank" rel="noopener" href="https://github.com/settings/personal-access-tokens/new">Creá otro token</a> (distinto del tuyo): <i>Only select repositories</i> → <code>diegopohl-datos</code>, <b>Contents: Read and write</b>, sin vencimiento o 1 año.</li>
+      <li>Pegalo acá y tocá «Activar».</li>
+    </ol>
+    <input id="nb-repo" class="inp font-mono" value="cesar385/diegopohl-datos" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <input id="nb-tok" class="inp font-mono" type="password" placeholder="github_pat_… (token de la nube)">
+    <button class="btn b-d w-full" onclick="saveNube()"><i class="fas fa-cloud-arrow-up"></i> Activar la nube</button>`;
+}
+async function saveNube(onlyToken) {
+  const t = $('#nb-tok').value.trim(); if (!t) return toast('Pegá el token de la nube');
+  const r = onlyToken ? NUBE.r : ($('#nb-repo').value.trim() || 'cesar385/diegopohl-datos');
+  try {
+    const res = await fetch('https://api.github.com/repos/' + r, {cache: 'no-store', headers: {Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json'}});
+    if (res.status === 401) throw new Error('El token no es válido');
+    if (!res.ok) throw new Error('El token no tiene acceso a ' + r + ' (¿creaste el repo y elegiste ese repo en el token?)');
+    const j = await res.json(); if (!j.private) throw new Error('El repositorio ' + r + ' tiene que ser PRIVADO');
+    NUBE = {r, t, k: NUBE ? NUBE.k : toB(rnd(32))};
+    await storeAccess(); drawNube(); toast('Nube activada. Mandale el link a Diego.', 6000);
+  } catch (e) { toast(e.message, 8000); }
 }
 function addMonths(s, n, day) {
   const b = s ? new Date(s + 'T12:00') : new Date();

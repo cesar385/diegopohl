@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-180.png">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="format-detection" content="telephone=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -157,12 +157,12 @@
       <p class="text-sm font-bold" id="me-name"></p>
       <p class="lbl" id="me-role"></p>
       <button onclick="logout()" class="text-xs text-slate-500 hover:text-brand-600 mt-2"><i class="fas fa-right-from-bracket mr-1"></i>Cerrar sesión</button>
-      <p class="text-[10px] text-slate-300 mt-2 font-mono" id="ver-side"></p>
+      <p class="text-[10px] text-slate-300 mt-2 font-mono"><span id="ver-side"></span> <span class="sync-ind ml-1"></span></p>
     </div>
   </aside>
   <header class="lg:hidden sticky top-0 z-30 bg-black text-white safe-t"><div class="safe-x py-2 flex items-center justify-between">
     <img src="img-removebg-preview.png" class="h-9 w-auto" alt="POHL" onerror="this.outerHTML='<b>POHL</b>'">
-    <span class="lbl !text-white/60" id="top-title"></span>
+    <span class="flex items-center gap-3"><span class="sync-ind text-xs"></span><span class="lbl !text-white/60" id="top-title"></span></span>
   </div></header>
   <div class="app-col">
   <main id="main" class="flex-1 w-full safe-x sm:px-6 lg:px-10 py-5 max-w-6xl"></main>
@@ -189,7 +189,7 @@
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.5.0';
 const SCHEMA = 2;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -267,7 +267,7 @@ function migrate(d) {
   return d;
 }
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(DB)); return true; }
+  try { localStorage.setItem(KEY, JSON.stringify(DB)); if (typeof SYNC !== 'undefined' && SYNC.cfg) scheduleSync(); return true; }
   catch (e) { toast('⚠️ No se pudo guardar: memoria llena. Descargá una copia de seguridad.', 6000); return false; }
 }
 /* Contraseñas: PBKDF2-SHA256 con sal aleatoria por usuario (210.000 vueltas).
@@ -275,7 +275,7 @@ function save() {
    No se obliga a cambiarla ni se exige un largo o formato determinado. */
 const PBKDF_IT = 210000;
 const DEFAULT_PWD = {salt: 'U1Sgx9agcw/6dQEyjUFXwg==', it: 210000, hash: 'JiWx1WDW5FqZPOZm9CT1dVjdN36fvMktrZu9C4/9KDM='};
-const toB64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const toB64 = buf => { const u = new Uint8Array(buf); let out = ''; for (let i = 0; i < u.length; i += 0x8000) out += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(out); };
 const fromB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function pbkdf(pass, salt, it) {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
@@ -338,6 +338,9 @@ function compressImage(file, max = 1280) {
 /* ---------- arranque ---------- */
 async function boot() {
   registerSW();
+  const link = parseLink();
+  if (link) { history.replaceState(null, '', location.pathname); localStorage.setItem(SYNC_KEY, JSON.stringify(link)); SYNC.linking = true; }
+  SYNC.cfg = syncCfg();
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
   const raw = localStorage.getItem(KEY);
   if (raw) {
@@ -351,10 +354,19 @@ async function boot() {
   }
   checkVersion(); setInterval(checkVersion, 30 * 60 * 1000);
   checkLicense(); setInterval(checkLicense, 60 * 60 * 1000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkVersion(); checkLicense(); } });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkVersion(); checkLicense(); if (SYNC.cfg) syncNow(); } });
+  setInterval(() => { if (SYNC.cfg && !document.hidden) syncNow(); }, 30e3);
   rotWords();
 }
-function start() {
+async function start() {
+  if (SYNC.cfg && SYNC.linking) {   // dispositivo recién vinculado: primero se traen los datos de la nube
+    SYNC.linking = false;
+    modal(`<div class="p-8 text-center"><i class="fas fa-cloud-arrow-down fa-2x text-brand-600"></i><p class="font-extrabold text-lg mt-3">Conectando con la nube del taller…</p><p class="text-sm text-slate-500 mt-1">Trayendo los datos. Puede tardar unos segundos.</p></div>`, {locked: true});
+    if (!isEmptyDB(DB)) queueAllPhotos();
+    await syncNow(true);
+    closeModal();
+    toast(SYNC.err ? '⚠️ ' + SYNC.err : '☁️ Dispositivo conectado a la nube del taller', 5000);
+  } else if (SYNC.cfg) syncNow();
   const seen = localStorage.getItem(SEEN_KEY);
   localStorage.setItem(SEEN_KEY, APP_VERSION);
   if (seen && seen !== APP_VERSION) setTimeout(() => toast('✅ Sistema actualizado a la versión ' + APP_VERSION + '. Tus datos están intactos.', 5000), 600);
@@ -797,8 +809,8 @@ async function createOrder() {
   const client = upsertClient(r.client, r.phone); if (r.phone) client.phone = r.phone;
   const ts = Date.now(); const id = uid();
   const photos = [];
-  for (const p of NEW_PHOTOS) { const pid = 'f_' + uid(); await PH.put(pid, p); photos.push(pid); }
-  let sig = null; if (NEW_SIG) { sig = 's_' + uid(); await PH.put(sig, NEW_SIG); }
+  for (const p of NEW_PHOTOS) { const pid = 'f_' + uid(); await PH.put(pid, p); queuePhoto(pid); photos.push(pid); }
+  let sig = null; if (NEW_SIG) { sig = 's_' + uid(); await PH.put(sig, NEW_SIG); queuePhoto(sig); }
   const o = {
     id, num: ++DB.seq.order, createdAt: ts, createdBy: ME.id, clientId: client.id, vehicle: r.vehicle,
     inShop: r.inShop, receivedAt: r.inShop ? ts : null, checklist: r.checklist, objetos: r.objetos, motivo: r.motivo, danos: r.danos,
@@ -922,11 +934,11 @@ function vOrden(id) {
 }
 vOrden.after = async id => {
   const o = getO(id); if (!o) return;
-  if (o.photos.length) { const html = []; for (const p of o.photos) { const d = await PH.get(p); if (d) html.push(`<div class="relative"><img src="${d}" class="w-full aspect-square object-cover rounded-lg cursor-zoom-in" onclick="viewImg(this.src)"><button onclick="delPhoto('${o.id}','${p}')" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-xs"><i class="fas fa-xmark"></i></button></div>`); } $('#o-photos').innerHTML = html.join('') || '<p class="text-sm text-slate-400 col-span-full">Sin fotos.</p>'; }
-  if (o.signature && $('#o-sig')) $('#o-sig').src = await PH.get(o.signature) || '';
+  if (o.photos.length) { const html = []; for (const p of o.photos) { const d = await getPhoto(p); if (d) html.push(`<div class="relative"><img src="${d}" class="w-full aspect-square object-cover rounded-lg cursor-zoom-in" onclick="viewImg(this.src)"><button onclick="delPhoto('${o.id}','${p}')" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-xs"><i class="fas fa-xmark"></i></button></div>`); } $('#o-photos').innerHTML = html.join('') || '<p class="text-sm text-slate-400 col-span-full">Sin fotos.</p>'; }
+  if (o.signature && $('#o-sig')) $('#o-sig').src = await getPhoto(o.signature) || '';
 };
 function viewImg(src) { modal(`<div class="p-2"><img src="${src}" class="w-full rounded-xl"><button class="btn btn-l w-full mt-2" onclick="closeModal()">Cerrar</button></div>`, {wide: true}); }
-async function addOrderPhotos(id, inp) { const o = getO(id); for (const f of inp.files) { try { const pid = 'f_' + uid(); await PH.put(pid, await compressImage(f)); o.photos.push(pid); } catch (e) {} } save(); render(); }
+async function addOrderPhotos(id, inp) { const o = getO(id); for (const f of inp.files) { try { const pid = 'f_' + uid(); queuePhoto(pid); await PH.put(pid, await compressImage(f)); o.photos.push(pid); } catch (e) {} } save(); render(); }
 async function delPhoto(id, pid) { if (!await ask('¿Eliminar la foto?', 'Eliminar', true)) return; const o = getO(id); o.photos = o.photos.filter(x => x !== pid); await PH.del(pid); save(); render(); }
 
 async function setStatus(id, s) {
@@ -949,7 +961,7 @@ function receiveVehicle(id) { const o = getO(id); o.inShop = true; o.receivedAt 
 function editOrder(id) {
   const o = getO(id);
   modal(`${mHead('Datos de la orden #' + o.num, 'Editar')}<div class="p-4 space-y-3 bg-slate-50">${receptionFields(o)}
-    <div class="card p-5"><div class="flex justify-between items-center"><p class="lbl">Firma del cliente</p><button class="btn btn-l btn-sm" onclick="signPad(async d=>{const o=getO('${id}');const k='s_'+uid();await PH.put(k,d);o.signature=k;save();editOrder('${id}');render()})"><i class="fas fa-signature"></i> ${o.signature ? 'Volver a firmar' : 'Firmar'}</button></div></div>
+    <div class="card p-5"><div class="flex justify-between items-center"><p class="lbl">Firma del cliente</p><button class="btn btn-l btn-sm" onclick="signPad(async d=>{const o=getO('${id}');const k='s_'+uid();await PH.put(k,d);queuePhoto(k);o.signature=k;save();editOrder('${id}');render()})"><i class="fas fa-signature"></i> ${o.signature ? 'Volver a firmar' : 'Firmar'}</button></div></div>
     <div class="flex justify-end gap-2"><button class="btn btn-l" onclick="closeModal()">Cancelar</button><button class="btn btn-p" onclick="saveEdit('${id}')">Guardar cambios</button></div></div>`, {wide: true});
 }
 function saveEdit(id) {
@@ -1086,7 +1098,7 @@ function docMenu(id) {
 const DOC_T = {presupuesto: 'Presupuesto', ingreso: 'Orden de recepción', recibo: 'Recibo'};
 async function docHTML(type, o) {
   const C = DB.config, c = clientOf(o), tot = oTotal(o);
-  const sig = o.signature ? await PH.get(o.signature) : null;
+  const sig = o.signature ? await getPhoto(o.signature) : null;
   const head = `<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #eee;padding-bottom:14px;margin-bottom:16px">
     <div><img src="img-removebg-preview.png" style="width:120px;margin-bottom:6px" onerror="this.style.display='none'">
       <div style="font-size:8px;line-height:1.45;font-weight:800"><div style="text-transform:uppercase">${esc(C.titular)}</div><div>CUIT: ${esc(C.cuit)}</div><div>Dirección: ${esc(C.direccion)}</div><div>Celular: ${esc(C.telefono)}</div><div>Mail: ${esc(C.email)}</div></div></div>
@@ -1346,11 +1358,12 @@ function vConfig() {
         ${DB.users.map(u => `<div class="flex items-center gap-3 py-2.5 border-b last:border-0"><div class="flex-1"><p class="font-bold text-sm">${esc(u.name)} ${u.id === ME.id ? '<span class="text-xs text-slate-400">(vos)</span>' : ''}</p><p class="text-xs text-slate-500">Usuario ${esc(u.user)} · ${u.role === 'admin' ? 'Administrador' : 'Técnico'}${num(u.comision) ? ' · comisión ' + u.comision + '%' : ''}</p></div><button class="btn btn-l btn-sm" onclick="userModal('${u.id}')"><i class="fas fa-pen"></i></button></div>`).join('')}
         <p class="text-xs text-slate-400 mt-2">Los técnicos ven órdenes, inventario, venta y clientes. No ven la caja ni la configuración.</p></div>
       <div class="card p-5"><p class="lbl mb-2">Copias de seguridad</p>
-        <p class="text-sm text-slate-500 mb-3">Los datos viven en este dispositivo. Descargá una copia seguido y guardala en Drive o mandala por WhatsApp; con ella podés pasar todo a otro teléfono o computadora.</p>
+        <p class="text-sm text-slate-500 mb-3">${SYNC.cfg ? 'Además de la nube, podés descargar una copia de todo cuando quieras.' : 'Los datos viven en este dispositivo. Descargá una copia seguido y guardala en Drive o mandala por WhatsApp; con ella podés pasar todo a otro teléfono o computadora.'}</p>
         <div class="grid grid-cols-2 gap-2"><button class="btn btn-d" onclick="exportBackup()"><i class="fas fa-download"></i> Descargar copia</button><label class="btn btn-l cursor-pointer"><i class="fas fa-upload"></i> Restaurar copia<input type="file" accept=".json,application/json" class="hidden" onchange="importBackup(this)"></label></div>
         ${localStorage.getItem(LEGACY_KEY) ? `<button class="btn btn-l btn-wrap w-full mt-2" onclick="reimportLegacy()"><i class="fas fa-clock-rotate-left shrink-0"></i><span>Traer presupuestos de la versión anterior</span></button>` : ''}
         ${localStorage.getItem(BACKUP_KEY) ? `<button class="btn btn-l btn-wrap w-full mt-2" onclick="restorePrev()"><i class="fas fa-rotate-left shrink-0"></i><span>Restaurar el respaldo automático<br><span class="text-xs font-normal text-slate-500">el que se guardó antes de la última actualización</span></span></button>` : ''}
         <p class="text-[11px] text-slate-400 mt-3 font-mono">${DB.orders.length} órdenes · ${DB.clients.length} clientes · ${DB.products.length} productos · ${(used / 1024).toFixed(0)} KB</p></div>
+      ${cloudCard()}
       ${licCard()}
       ${DB.legal ? `<div class="card p-4 text-xs text-slate-500"><i class="fas fa-file-contract text-green-600 mr-1"></i>Términos y política de cookies aceptados el ${fDT(DB.legal.ts)} por ${esc(DB.legal.nombre || '')}. <a class="underline" href="terminos.html" target="_blank">Ver</a></div>` : ''}
       <div class="card p-5"><p class="lbl mb-2">Versión del sistema</p><div class="flex justify-between items-center"><span class="font-mono font-bold">v${APP_VERSION}</span><button class="btn btn-l btn-sm" onclick="checkVersion(true)"><i class="fas fa-rotate"></i> Buscar actualización</button></div>
@@ -1518,6 +1531,149 @@ function showLock() {
       <button class="text-xs text-slate-400 underline mt-1" onclick="checkLicense().then(()=>toast(licState().s==='bloqueado'?'Todavía figura pendiente. Puede tardar unos minutos en acreditarse.':'¡Listo! Sistema habilitado.'))">Ya me lo habilitaron — volver a verificar</button>
       <button class="text-xs text-slate-400 underline" onclick="closeModal();logout()">Cerrar sesión</button>
     </div></div>`, {locked: true});
+}
+
+/* =====================================================================
+   NUBE DEL TALLER — sincronización con un repositorio PRIVADO de GitHub
+   Los datos viajan cifrados (AES-GCM 256) con una clave que solo está en el
+   link de vinculación. Fusión por registro: si dos dispositivos cambian cosas
+   distintas, se conservan las dos; si cambian lo mismo, gana el último que sincroniza.
+   ===================================================================== */
+const SYNC_KEY = 'pohl_nube', SYNC_PHOTOS = 'pohl_nube_fotos', SYNC_LAST = 'pohl_nube_ultimo', DATA_FILE = 'datos.enc.json';
+const SYNC = {cfg: null, busy: false, again: false, timer: null, err: '', linking: false};
+function syncCfg() { try { const c = JSON.parse(localStorage.getItem(SYNC_KEY)); return c && c.r && c.t && c.k ? c : null; } catch (e) { return null; } }
+function parseLink() {
+  const m = location.hash.match(/^#vincular=([A-Za-z0-9_-]+)/); if (!m) return null;
+  try { const o = JSON.parse(new TextDecoder().decode(b64uDec(m[1]))); return o.r && o.t && o.k ? {r: o.r, t: o.t, k: o.k} : null; } catch (e) { return null; }
+}
+const linkFor = c => location.origin + location.pathname.replace(/[^/]*$/, '') + '#vincular=' + b64uStr(JSON.stringify(c));
+const b64uStr = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+async function aesKey() { return crypto.subtle.importKey('raw', fromB64(SYNC.cfg.k), 'AES-GCM', false, ['encrypt', 'decrypt']); }
+async function enc(obj) { const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, await aesKey(), new TextEncoder().encode(JSON.stringify(obj))); return JSON.stringify({v: 1, iv: toB64(iv), ct: toB64(ct)}); }
+async function dec(txt) { const o = JSON.parse(txt); const pt = await crypto.subtle.decrypt({name: 'AES-GCM', iv: fromB64(o.iv)}, await aesKey(), fromB64(o.ct)); return JSON.parse(new TextDecoder().decode(pt)); }
+async function ghApi(path, opt = {}) {
+  const r = await fetch('https://api.github.com/repos/' + SYNC.cfg.r + path, {...opt, cache: 'no-store', headers: {Authorization: 'Bearer ' + SYNC.cfg.t, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}});
+  if (r.status === 404 && opt.allow404) return null;
+  if (!r.ok) { const e = new Error('GitHub ' + r.status); e.status = r.status; throw e; }
+  return r.json();
+}
+const u8b64 = s => btoa(unescape(encodeURIComponent(s))), b64u8 = s => decodeURIComponent(escape(atob(String(s).replace(/\n/g, ''))));
+async function ghGet(name) { const j = await ghApi('/contents/' + name, {allow404: true}); if (!j) return null; let c = j.content; if (!c) c = (await ghApi('/git/blobs/' + j.sha)).content; return {sha: j.sha, text: b64u8(c)}; }
+async function ghPut(name, text, msg, sha) { const b = {message: msg, content: u8b64(text)}; if (sha) b.sha = sha; return (await ghApi('/contents/' + name, {method: 'PUT', body: JSON.stringify(b)})).content.sha; }
+
+const COLS = ['users', 'clients', 'orders', 'products', 'moves', 'cash', 'sales', 'closures'];
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const isEmptyDB = d => !['orders', 'clients', 'products', 'cash', 'sales'].some(c => (d[c] || []).length);
+function merge3(B, L, R) {
+  if (!R) return L;
+  if (!B && isEmptyDB(L)) return migrate(JSON.parse(JSON.stringify(R)));   // dispositivo nuevo: se toma la nube
+  const M = JSON.parse(JSON.stringify(R));
+  for (const c of COLS) {
+    const bm = new Map(((B && B[c]) || []).map(x => [x.id, x])), lm = new Map((L[c] || []).map(x => [x.id, x]));
+    const arr = M[c] || [], idx = new Map(arr.map((x, i) => [x.id, i]));
+    for (const [id, x] of lm) if (!bm.has(id) || !same(bm.get(id), x)) { if (idx.has(id)) arr[idx.get(id)] = x; else { idx.set(id, arr.length); arr.push(x); } }
+    const del = new Set([...bm.keys()].filter(id => !lm.has(id)));
+    M[c] = arr.filter(x => !del.has(x.id));
+  }
+  if (B && !same(B.config, L.config)) M.config = L.config;
+  if (L.legal && (!M.legal || (L.legal.ts || 0) > (M.legal.ts || 0))) M.legal = L.legal;
+  M.seq = {order: Math.max(num((L.seq || {}).order), num((R.seq || {}).order)), sale: Math.max(num((L.seq || {}).sale), num((R.seq || {}).sale))};
+  // números repetidos (dos dispositivos crearon a la vez): se renumera el más nuevo
+  const fix = (list, k) => { const seen = new Set(); list.slice().sort((a, b) => (a.createdAt || a.ts || 0) - (b.createdAt || b.ts || 0)).forEach(x => { if (seen.has(x.num)) x.num = ++M.seq[k]; seen.add(x.num); }); };
+  fix(M.orders, 'order'); fix(M.sales, 'sale');
+  // stock = suma de movimientos (no se pisa si dos dispositivos venden el mismo producto)
+  M.products.forEach(p => { const mv = M.moves.filter(m => m.pid === p.id); if (mv.length) p.stock = mv.reduce((a, m) => a + num(m.qty), 0); });
+  return migrate(M);
+}
+function scheduleSync(ms = 2500) { clearTimeout(SYNC.timer); SYNC.timer = setTimeout(() => syncNow(), ms); }
+async function syncNow(manual) {
+  if (!SYNC.cfg) return;
+  if (SYNC.busy) { SYNC.again = true; return; }
+  SYNC.busy = true; updSyncUI();
+  try {
+    for (let i = 0; i < 4; i++) {
+      const snap = JSON.stringify(DB), L = JSON.parse(snap);
+      const f = await ghGet(DATA_FILE);
+      const R = f ? await dec(f.text) : null;
+      const B = await PH.get('__base');
+      const M = merge3(B, L, R);
+      if (!R || !same(M, R)) {
+        try { await ghPut(DATA_FILE, await enc(M), 'Datos del taller · ' + new Date().toLocaleString('es-AR'), f && f.sha); }
+        catch (e) { if (e.status === 409 || e.status === 422) continue; throw e; }
+      }
+      if (JSON.stringify(DB) === snap) {   // nadie tocó nada mientras sincronizaba
+        await PH.put('__base', M);
+        if (!same(M, L)) { DB = M; localStorage.setItem(KEY, JSON.stringify(DB)); if (ME) ME = DB.users.find(u => u.id === ME.id) || ME; softRender(); }
+      } else SYNC.again = true;
+      break;
+    }
+    await uploadPhotos();
+    SYNC.err = ''; localStorage.setItem(SYNC_LAST, Date.now());
+  } catch (e) {
+    SYNC.err = e.status === 401 ? 'El acceso a la nube venció o fue revocado' : e.status === 403 || e.status === 404 ? 'Sin permiso sobre el repositorio de datos' : e.name === 'OperationError' ? 'La clave de la nube no coincide' : 'Sin conexión con la nube';
+    if (manual) toast('⚠️ ' + SYNC.err, 5000);
+  }
+  SYNC.busy = false; updSyncUI();
+  if (SYNC.again) { SYNC.again = false; scheduleSync(800); }
+}
+function softRender() {
+  const busyUI = $('#modal-root').innerHTML || route().v === 'nueva' || ['INPUT', 'TEXTAREA', 'SELECT'].includes((document.activeElement || {}).tagName);
+  if (!ME || $('#app').classList.contains('hidden')) return;
+  if (busyUI) toast('☁️ Llegaron datos de otro dispositivo'); else render();
+}
+function queuePhoto(pid) { if (!SYNC.cfg) return; const q = JSON.parse(localStorage.getItem(SYNC_PHOTOS) || '[]'); if (!q.includes(pid)) { q.push(pid); localStorage.setItem(SYNC_PHOTOS, JSON.stringify(q)); } }
+function queueAllPhotos() { DB.orders.forEach(o => [...(o.photos || []), o.signature].filter(Boolean).forEach(queuePhoto)); }
+async function uploadPhotos() {
+  let q = JSON.parse(localStorage.getItem(SYNC_PHOTOS) || '[]');
+  for (const pid of [...q]) {
+    const d = await PH.get(pid);
+    if (d) { try { await ghPut('fotos/' + pid + '.enc', await enc(d), 'Foto', null); } catch (e) { if (e.status !== 422) throw e; } }
+    q = q.filter(x => x !== pid); localStorage.setItem(SYNC_PHOTOS, JSON.stringify(q));
+  }
+}
+async function getPhoto(pid) {
+  let d = await PH.get(pid); if (d || !SYNC.cfg) return d;
+  try { const f = await ghGet('fotos/' + pid + '.enc'); if (f) { d = await dec(f.text); await PH.put(pid, d); } } catch (e) {}
+  return d;
+}
+function updSyncUI() {
+  const last = num(localStorage.getItem(SYNC_LAST));
+  const html = !SYNC.cfg ? '' : SYNC.busy ? '<i class="fas fa-rotate fa-spin text-sky-500" title="Sincronizando"></i>' : SYNC.err ? `<i class="fas fa-cloud text-amber-500" title="${esc(SYNC.err)}"></i>` : `<i class="fas fa-cloud text-green-500" title="Sincronizado ${last ? fTime(last) : ''}"></i>`;
+  document.querySelectorAll('.sync-ind').forEach(e => e.innerHTML = html);
+  const st = $('#cloud-state'); if (st) st.innerHTML = cloudState();
+}
+function cloudState() {
+  const last = num(localStorage.getItem(SYNC_LAST)), pend = JSON.parse(localStorage.getItem(SYNC_PHOTOS) || '[]').length;
+  if (SYNC.busy) return '<span class="pill bg-sky-50 text-sky-700">Sincronizando…</span>';
+  if (SYNC.err) return `<span class="pill bg-amber-50 text-amber-700">${esc(SYNC.err)}</span>`;
+  return `<span class="pill bg-green-50 text-green-700">Sincronizado</span> <span class="text-xs text-slate-500">${last ? fDT(last) : ''}${pend ? ' · ' + pend + ' foto(s) por subir' : ''}</span>`;
+}
+function cloudCard() {
+  if (!SYNC.cfg) return `<div class="card p-5"><p class="lbl mb-2"><i class="fas fa-cloud mr-1"></i>Nube del taller</p>
+    <p class="text-sm text-slate-600">Este dispositivo guarda los datos solo acá. Para verlos desde otros dispositivos, abrí el <b>link de vinculación</b> que te manda el administrador del sistema, o pegalo acá:</p>
+    <div class="flex gap-2 mt-3"><input id="cl-link" class="inp text-xs font-mono" placeholder="https://…#vincular=…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn btn-d" onclick="pasteLink()">Conectar</button></div></div>`;
+  return `<div class="card p-5"><div class="flex justify-between items-center mb-2 gap-2"><p class="lbl"><i class="fas fa-cloud mr-1"></i>Nube del taller</p><span id="cloud-state">${cloudState()}</span></div>
+    <p class="text-sm text-slate-600">Los datos se guardan cifrados en la nube y se ven en todos los dispositivos vinculados. Se sincroniza solo cada 30 segundos y al guardar.</p>
+    <div class="grid grid-cols-2 gap-2 mt-3"><button class="btn btn-l" onclick="syncNow(true)"><i class="fas fa-rotate"></i> Sincronizar</button><button class="btn btn-d" onclick="shareLink()"><i class="fas fa-mobile-screen"></i> Vincular otro</button></div>
+    <button class="text-xs text-slate-400 underline mt-3" onclick="unlinkDevice()">Desvincular este dispositivo</button></div>`;
+}
+async function pasteLink() {
+  const m = ($('#cl-link').value || '').match(/#vincular=([A-Za-z0-9_-]+)/); if (!m) return toast('Ese no es un link de vinculación');
+  location.hash = 'vincular=' + m[1]; location.reload();
+}
+function shareLink() {
+  const l = linkFor(SYNC.cfg);
+  modal(`${mHead('Vincular otro dispositivo', 'Nube del taller')}<div class="p-5 space-y-3 text-sm">
+    <p>Abrí este link en el otro celular o computadora. Se conecta solo y trae todos los datos; después se entra con el usuario y la contraseña de siempre.</p>
+    <div class="flex justify-center"><div id="lk-qr" class="p-2 bg-white rounded-xl border"></div></div>
+    <p class="text-center text-xs text-slate-500">O escaneá el código con la cámara del otro celular.</p>
+    <div class="grid grid-cols-2 gap-2"><button class="btn btn-l" onclick="navigator.clipboard.writeText('${l}').then(()=>toast('Link copiado'))"><i class="fas fa-copy"></i> Copiar link</button><button class="btn btn-g" onclick="openWA('','Link para conectar el sistema del taller (no lo compartas):\\n${l}')"><i class="fab fa-whatsapp"></i> WhatsApp</button></div>
+    <p class="text-xs text-amber-700 bg-amber-50 rounded-lg p-2"><i class="fas fa-triangle-exclamation mr-1"></i>Este link da acceso a los datos del taller: mandalo solo a tus propios dispositivos.</p></div>`);
+  try { new QRCode($('#lk-qr'), {text: l, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.L}); } catch (e) { $('#lk-qr').remove(); }
+}
+async function unlinkDevice() {
+  if (!await ask('¿Desvincular este dispositivo de la nube? Los datos quedan acá y en la nube; solo deja de sincronizar.', 'Desvincular', true)) return;
+  localStorage.removeItem(SYNC_KEY); localStorage.removeItem(SYNC_PHOTOS); await PH.del('__base'); SYNC.cfg = null; updSyncUI(); render();
 }
 
 boot();

@@ -10,6 +10,11 @@ Sistema web (GitHub Pages, sin servidor) para el taller de Diego Pohl, Federal (
 - `sw.js` — service worker "primero la red" (las actualizaciones llegan solas, funciona sin conexión).
 
 ## Datos
+**Nube del taller:** si el dispositivo está vinculado, los datos se sincronizan cifrados (AES-GCM 256) con un repositorio
+**privado** (`cesar385/diegopohl-datos`, archivo `datos.enc.json` y fotos en `fotos/`). La clave de cifrado y el token
+(solo con acceso a ese repo) viajan en el link de vinculación que genera el panel del dueño. Fusión por registro (3 vías)
+con una copia base en IndexedDB; el stock se recalcula con los movimientos.
+
 Se guardan en el dispositivo: `localStorage['pohl_taller']` y las fotos en IndexedDB `pohl_taller_fotos`.
 Los presupuestos de la versión anterior (`localStorage['pohl_v6']`) se migran al abrir la versión nueva
 y **no se borran**; además se guarda una copia en `pohl_v6_respaldo`.

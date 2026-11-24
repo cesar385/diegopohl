@@ -48,7 +48,7 @@
       <input id="li-pass" class="inp" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button class="btn b-d w-full" id="li-btn">Entrar <i class="fas fa-arrow-right"></i></button>
     </form>
-    <p class="text-[11px] text-slate-400 mt-4 text-center">Funciona desde cualquier computadora o celular.</p>
+    <p class="text-[11px] text-slate-400 mt-4 text-center">Solo usuario y contraseña: el token ya está guardado cifrado. Funciona desde cualquier computadora o celular.</p>
     <button class="text-xs text-slate-400 underline mt-2 block mx-auto" onclick="showSetup(true)">Olvidé la contraseña / configurar de nuevo</button>
   </section>
 
@@ -65,7 +65,7 @@
     </div>
 
     <div id="su-tok" class="hidden mt-5">
-      <p class="text-sm font-semibold">Token de GitHub</p>
+      <p class="text-sm font-semibold">Token de GitHub <span class="ml-1 pill bg-sky-50 text-sky-700">se pide solo esta vez</span></p>
       <ol class="steps text-xs text-slate-600 mt-1 list-decimal pl-5">
         <li>Abrí <a class="text-sky-600 underline" target="_blank" rel="noopener" href="https://github.com/settings/personal-access-tokens">GitHub → Fine-grained tokens</a> (podés regenerar el que ya tenés).</li>
         <li><i>Only select repositories</i> → <code>diegopohl</code>; <b>Permissions → Contents: Read and write</b>.</li>

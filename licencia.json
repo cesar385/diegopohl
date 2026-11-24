@@ -1,0 +1,18 @@
+{
+  "cliente": "POHL Chapa y Pintura (Diego Pohl)",
+  "plan": "Sistema de gestión del taller a medida",
+  "monto": 0,
+  "moneda": "ARS",
+  "vence": "2026-12-24",
+  "diaVencimiento": 24,
+  "avisoDias": 5,
+  "gracia": 5,
+  "estado": "activo",
+  "linkPago": "",
+  "alias": "",
+  "whatsappDueno": "",
+  "telefonoCliente": "3454497008",
+  "mensaje": "",
+  "ultimoPago": null,
+  "actualizado": "2026-11-24T16:30:00-03:00"
+}

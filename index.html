@@ -151,7 +151,7 @@ if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sy
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 const SCHEMA = 1;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -286,7 +286,8 @@ async function boot() {
     if (legacy.length) showLegacyUpgrade(legacy); else { save(); start(); }
   }
   checkVersion(); setInterval(checkVersion, 30 * 60 * 1000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
+  checkLicense(); setInterval(checkLicense, 60 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkVersion(); checkLicense(); } });
   rotWords();
 }
 function start() {
@@ -408,7 +409,8 @@ function render() {
   const views = {panel: vPanel, ordenes: vOrdenes, orden: vOrden, nueva: vNueva, inventario: vInventario, pos: vPos, caja: vCaja, clientes: vClientes, config: vConfig};
   const fn = views[v] || vOrdenes;
   $('#top-title').textContent = (NAV.find(n => n.v === active) || {t: ''}).t;
-  $('#main').innerHTML = fn(id) || '';
+  $('#main').innerHTML = licBanner() + (fn(id) || '');
+  if (licState().s === 'bloqueado') showLock();
   window.scrollTo(0, 0);
   if (fn.after) fn.after(id);
 }
@@ -1198,6 +1200,7 @@ function vConfig() {
         ${localStorage.getItem(LEGACY_KEY) ? `<button class="btn btn-l w-full mt-2" onclick="reimportLegacy()"><i class="fas fa-clock-rotate-left"></i> Traer presupuestos de la versión anterior</button>` : ''}
         ${localStorage.getItem(BACKUP_KEY) ? `<button class="btn btn-l w-full mt-2" onclick="restorePrev()"><i class="fas fa-rotate-left"></i> Volver al respaldo automático previo a la última actualización</button>` : ''}
         <p class="text-[11px] text-slate-400 mt-3 font-mono">${DB.orders.length} órdenes · ${DB.clients.length} clientes · ${DB.products.length} productos · ${(used / 1024).toFixed(0)} KB</p></div>
+      ${licCard()}
       <div class="card p-5"><p class="lbl mb-2">Versión del sistema</p><div class="flex justify-between items-center"><span class="font-mono font-bold">v${APP_VERSION}</span><button class="btn btn-l btn-sm" onclick="checkVersion(true)"><i class="fas fa-rotate"></i> Buscar actualización</button></div>
         <a href="version-anterior.html" class="text-xs text-slate-400 underline mt-2 inline-block">Abrir la versión anterior (solo presupuestos)</a></div>
     </div>
@@ -1247,6 +1250,77 @@ async function restorePrev() {
   const b = JSON.parse(localStorage.getItem(BACKUP_KEY) || 'null'); if (!b) return;
   if (!await ask(`¿Volver a los datos guardados el ${fDT(b.fecha)} (v${b.version})? Se pierden los cambios posteriores.`, 'Volver', true)) return;
   DB = migrate(b.data); await ensureAdmin(); save(); render(); toast('Datos restaurados');
+}
+
+/* =====================================================================
+   ABONO MENSUAL DEL SISTEMA (licencia)
+   El dueño del sistema la maneja desde dueno.html, que escribe licencia.json
+   en el repositorio. Acá solo se lee. Nunca se borran datos por falta de pago:
+   si está vencido se bloquea el uso, pero se puede pagar y descargar la copia.
+   ===================================================================== */
+const LIC_CACHE = 'pohl_licencia';
+let LIC = null;
+async function checkLicense() {
+  try { const r = await fetch('licencia.json?t=' + Date.now(), {cache: 'no-store'}); if (r.ok) { LIC = await r.json(); localStorage.setItem(LIC_CACHE, JSON.stringify(LIC)); } } catch (e) {}
+  if (!LIC) { try { LIC = JSON.parse(localStorage.getItem(LIC_CACHE)); } catch (e) {} }
+  if (!ME) return;
+  const st = licState().s, key = st + '|' + (LIC && LIC.vence);
+  if (st !== 'bloqueado' && $('#lock-box')) { closeModal(); render(); }
+  else if (st === 'bloqueado') showLock();
+  else if (key !== checkLicense.last && !$('#modal-root').innerHTML) render();   // solo si cambió algo
+  checkLicense.last = key;
+}
+function licState() {
+  if (!LIC) return {s: 'ok'};
+  if (LIC.estado === 'suspendido') return {s: 'bloqueado', suspendido: true};
+  if (!LIC.vence) return {s: 'ok'};
+  const d = Math.floor((new Date(LIC.vence + 'T23:59:59').getTime() - Date.now()) / 864e5);
+  if (d >= 0) return {s: d <= num(LIC.avisoDias ?? 5) ? 'proximo' : 'ok', d};
+  const resta = num(LIC.gracia) + d;
+  return resta >= 0 ? {s: 'gracia', d, resta} : {s: 'bloqueado', d};
+}
+const licVence = () => LIC && LIC.vence ? fDate(new Date(LIC.vence + 'T12:00').getTime()) : '—';
+function payLic() { if (LIC && LIC.linkPago) window.open(LIC.linkPago, '_blank'); else toast('El link de pago todavía no está cargado. Consultá al administrador del sistema.'); }
+function paidLic() {
+  const tel = LIC && LIC.whatsappDueno; if (!tel) return toast('No hay WhatsApp cargado del administrador.');
+  openWA(tel, `Hola! Soy ${DB.config.titular} (${DB.config.nombre}). Ya pagué el abono del sistema que vencía el ${licVence()}. Te envío el comprobante.`);
+}
+function licBanner() {
+  if (!LIC || !isAdmin()) return '';
+  const st = licState();
+  if (st.s === 'proximo') return `<div class="card p-4 mb-4 border-amber-300 bg-amber-50 flex flex-wrap items-center gap-3 text-sm"><i class="fas fa-calendar-day text-amber-600"></i><div class="flex-1 min-w-[200px]"><b>El abono del sistema vence ${st.d === 0 ? 'hoy' : st.d === 1 ? 'mañana' : 'en ' + st.d + ' días'}</b> (${licVence()})${num(LIC.monto) ? ' · ' + money(LIC.monto) : ''}</div><button class="btn btn-sm text-white" style="background:#009ee3" onclick="payLic()"><i class="fas fa-credit-card"></i> Pagar con Mercado Pago</button></div>`;
+  if (st.s === 'gracia') return `<div class="card p-4 mb-4 border-red-300 bg-red-50 flex flex-wrap items-center gap-3 text-sm"><i class="fas fa-triangle-exclamation text-red-600"></i><div class="flex-1 min-w-[200px]"><b>El abono del sistema venció el ${licVence()}.</b> Quedan ${st.resta === 0 ? 'menos de 1 día' : st.resta + ' día(s)'} antes de que se suspenda el uso. Tus datos no se pierden.</div><button class="btn btn-sm text-white" style="background:#009ee3" onclick="payLic()"><i class="fas fa-credit-card"></i> Pagar ${num(LIC.monto) ? money(LIC.monto) : ''}</button><button class="btn btn-l btn-sm" onclick="paidLic()">Ya pagué</button></div>`;
+  return '';
+}
+function licCard() {
+  if (!LIC) return '';
+  const st = licState();
+  const lab = {ok: ['Al día', 'bg-green-50 text-green-700'], proximo: ['Vence pronto', 'bg-amber-50 text-amber-700'], gracia: ['Vencido', 'bg-red-50 text-red-700'], bloqueado: ['Suspendido', 'bg-red-50 text-red-700']}[st.s];
+  return `<div class="card p-5"><div class="flex justify-between items-center mb-2"><p class="lbl">Abono del sistema</p><span class="pill ${lab[1]}">${lab[0]}</span></div>
+    <p class="font-bold">${esc(LIC.plan || 'Sistema de gestión a medida')}</p>
+    <div class="grid grid-cols-2 gap-2 mt-3 text-sm"><div><p class="lbl !text-[9px]">Abono mensual</p><p class="font-bold">${num(LIC.monto) ? money(LIC.monto) : 'A definir'}</p></div><div><p class="lbl !text-[9px]">Próximo vencimiento</p><p class="font-bold">${licVence()}</p></div></div>
+    ${LIC.ultimoPago ? `<p class="text-xs text-slate-500 mt-2">Último pago registrado: ${esc(LIC.ultimoPago.fecha ? fDate(new Date(LIC.ultimoPago.fecha + 'T12:00').getTime()) : '')} ${LIC.ultimoPago.periodo ? '· período ' + esc(LIC.ultimoPago.periodo) : ''}</p>` : ''}
+    <div class="grid grid-cols-2 gap-2 mt-3"><button class="btn text-white" style="background:#009ee3" onclick="payLic()"><i class="fas fa-credit-card"></i> Mercado Pago</button><button class="btn btn-l" onclick="paidLic()"><i class="fab fa-whatsapp"></i> Ya pagué</button></div>
+    ${LIC.alias ? `<p class="text-xs text-slate-500 mt-2">También por transferencia al alias <b class="font-mono">${esc(LIC.alias)}</b></p>` : ''}</div>`;
+}
+function showLock() {
+  if ($('#lock-box')) return;
+  const st = licState();
+  modal(`<div id="lock-box" class="p-6 sm:p-8 text-center">
+    <div class="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4"><i class="fas fa-lock fa-2x"></i></div>
+    <p class="eyebrow">${st.suspendido ? 'Servicio suspendido' : 'Abono vencido el ' + licVence()}</p>
+    <h2 class="text-2xl font-extrabold mt-2">El uso del sistema está en pausa</h2>
+    <p class="text-slate-500 mt-3">${esc(LIC.mensaje || 'Para seguir usando el sistema hay que regularizar el abono mensual.')}</p>
+    ${num(LIC.monto) ? `<p class="text-3xl font-extrabold mt-4">${money(LIC.monto)}</p>` : ''}
+    <div class="card bg-slate-50 p-3 mt-4 text-sm"><i class="fas fa-shield-halved text-green-600 mr-1"></i>Tus órdenes, clientes y caja <b>están guardados y no se borran</b>. Se habilita apenas se registre el pago.</div>
+    <div class="grid gap-2 mt-5">
+      ${isAdmin() ? `<button class="btn text-white py-3" style="background:#009ee3" onclick="payLic()"><i class="fas fa-credit-card"></i> Pagar con Mercado Pago</button>
+      <button class="btn btn-l" onclick="paidLic()"><i class="fab fa-whatsapp"></i> Ya pagué — enviar comprobante</button>
+      ${LIC.alias ? `<p class="text-xs text-slate-500">O transferí al alias <b class="font-mono">${esc(LIC.alias)}</b></p>` : ''}
+      <button class="btn btn-l" onclick="exportBackup()"><i class="fas fa-download"></i> Descargar copia de seguridad</button>` : `<p class="text-sm text-slate-500">Avisale al administrador del taller.</p>`}
+      <button class="text-xs text-slate-400 underline mt-1" onclick="checkLicense().then(()=>toast(licState().s==='bloqueado'?'Todavía figura pendiente. Puede tardar unos minutos en acreditarse.':'¡Listo! Sistema habilitado.'))">Ya me lo habilitaron — volver a verificar</button>
+      <button class="text-xs text-slate-400 underline" onclick="closeModal();logout()">Cerrar sesión</button>
+    </div></div>`, {locked: true});
 }
 
 boot();

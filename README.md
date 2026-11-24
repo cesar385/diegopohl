@@ -20,3 +20,12 @@ y **no se borran**; además se guarda una copia en `pohl_v6_respaldo`.
 3. Subir `APP_VERSION` en `index.html` **y** `version` en `version.json` (mismo número).
 4. Quien tenga el sistema abierto ve "Hay una actualización". Al aceptar se guarda un respaldo
    automático (`pohl_taller_respaldo_previo`) y se recarga. Desde Configuración se puede volver a ese respaldo.
+
+## Abono mensual (panel del dueño)
+- `dueno.html` — panel del dueño del sistema (no usa el usuario de Diego). Se entra con un token
+  fine-grained de GitHub con permiso *Contents: Read and write* solo sobre este repositorio.
+- `licencia.json` — lo escribe el panel: monto, vencimiento, días de aviso y de gracia, link de pago
+  de Mercado Pago, alias, estado (activo / suspendido). El sistema de Diego lo lee cada vez que se abre.
+- Avisos: amarillo N días antes, rojo durante la gracia, y bloqueo al terminar la gracia o si se suspende.
+  El bloqueo nunca borra datos: permite pagar, avisar "Ya pagué" y descargar la copia de seguridad.
+- El dinero va directo a la cuenta de Mercado Pago dueña del link de pago (o suscripción) cargado.

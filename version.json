@@ -1,8 +1,8 @@
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "fecha": "2026-11-24",
   "notas": [
-    "Sistema completo de gestión del taller: órdenes, recepción con fotos y firma, inventario, venta de mostrador, caja, clientes y empleados.",
-    "Los presupuestos de la versión anterior se pasan automáticamente al sistema nuevo."
+    "Abono mensual del sistema con pago por Mercado Pago.",
+    "Tus datos se conservan."
   ]
 }

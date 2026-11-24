@@ -190,7 +190,7 @@
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.5.3';
+const APP_VERSION = '2.5.4';
 const SCHEMA = 2;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -520,7 +520,7 @@ function showApp() {
   $('#me-name').textContent = ME.name; $('#me-role').textContent = ME.role === 'admin' ? 'Administrador' : 'Técnico';
   $('#ver-side').textContent = 'v' + APP_VERSION;
   if (!location.hash || location.hash === '#') location.hash = isAdmin() ? '#/panel' : '#/ordenes'; else render();
-  if (needLegal()) showLegal(); else if (needAbonoAviso()) showAbonoAviso();
+  if (needLegal()) showLegal(); else if (needAbonoAviso()) showAbonoAviso(); else setTimeout(postLoginSub, 300);
 }
 /* Términos y condiciones + política de cookies: se aceptan una sola vez (se vuelve a pedir solo si cambian). */
 const LEGAL_VERSION = '2026-11-24';
@@ -544,6 +544,7 @@ function showLegal() {
 const needAbonoAviso = () => ME && isAdmin() && !(DB.avisos && DB.avisos.abono) && licState().s !== 'bloqueado';
 function showAbonoAviso() {
   if ($('#abono-aviso')) return;
+  sessionStorage.removeItem(SUB_FLAG);
   const m = LIC && num(LIC.monto), subs = licSubs();
   modal(`<div id="abono-aviso">
     <div class="p-6 sm:p-8 text-white" style="background:linear-gradient(135deg,#0f172a,#1e293b)">
@@ -579,11 +580,36 @@ function loginAviso() {
       <p class="text-sm text-white/70 mt-1">Incluye todas las funciones, las actualizaciones y la nube. Se paga con Mercado Pago${licSubs() ? ' y se debita solo cada mes' : ''}. Tus datos están seguros y no se borran.</p>
     </div>
     <div class="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto">
-      ${LIC && LIC.linkPago ? `<button class="btn text-white px-2 text-[13px] sm:text-sm" style="background:#009ee3" onclick="payLic()"><span class="mp-logo" style="--mc:#fff;color:#009ee3;background:#fff">MP</span> ${licSubs() ? 'Suscribirme' : 'Pagar'}</button>` : ''}
+      ${LIC && LIC.linkPago ? `<button class="btn text-white px-2 text-[13px] sm:text-sm" style="background:#009ee3" onclick="subFromHome()"><span class="mp-logo" style="--mc:#fff;color:#009ee3;background:#fff">MP</span> ${licSubs() ? 'Suscribirme' : 'Pagar'}</button>` : ''}
       <a href="terminos.html" target="_blank" class="btn px-2 text-[13px] sm:text-sm bg-white/10 text-white hover:bg-white/20 ${LIC && LIC.linkPago ? '' : 'col-span-2'}">Ver condiciones</a>
     </div>
     <button onclick="sessionStorage.setItem('pohl_aviso_cerrado','1');loginAviso()" class="absolute top-2 right-2 w-8 h-8 rounded-full text-white/50 hover:text-white hover:bg-white/10" aria-label="Cerrar aviso"><i class="fas fa-xmark"></i></button>
   </div>`;
+}
+/* Suscribirse desde la portada: primero hay que entrar a la cuenta */
+const SUB_FLAG = 'pohl_suscribir_al_entrar';
+function subFromHome() {
+  if (ME) return postLoginSub(true);
+  sessionStorage.setItem(SUB_FLAG, '1');
+  const card = $('#l-user').closest('.card');
+  card.scrollIntoView({behavior: 'smooth', block: 'center'});
+  card.classList.add('ring-4', 'ring-sky-300'); setTimeout(() => card.classList.remove('ring-4', 'ring-sky-300'), 2500);
+  let n = $('#sub-note'); if (!n) { card.querySelector('form').insertAdjacentHTML('beforebegin', '<p id="sub-note" class="text-sm rounded-xl p-3 mb-3" style="background:#e6f6fd;color:#075985"><i class="fas fa-circle-info mr-1"></i>Para suscribirte, primero entrá a tu cuenta con tu usuario y contraseña.</p>'); }
+  setTimeout(() => $('#l-user').focus(), 400);
+}
+function postLoginSub(force) {
+  if (!force && !sessionStorage.getItem(SUB_FLAG)) return;
+  if (!ME || $('#modal-root').innerHTML) return;        // espera a que se cierren términos / anuncio
+  sessionStorage.removeItem(SUB_FLAG); const n = $('#sub-note'); if (n) n.remove();
+  if (!isAdmin()) return toast('La suscripción la hace el administrador del taller.', 5000);
+  if (!LIC || !LIC.linkPago) return toast('El link de pago todavía no está disponible.');
+  const subs = licSubs();
+  modal(`${mHead(subs ? 'Suscribirte al abono' : 'Pagar el abono', 'Abono del sistema')}<div class="p-5 sm:p-6 space-y-3 text-sm">
+    <p>Hola <b>${esc(ME.name.split(' ')[0])}</b>, ya entraste a tu cuenta.</p>
+    ${num(LIC.monto) ? `<p class="text-center py-2"><span class="text-4xl font-extrabold">${money(LIC.monto)}</span><span class="text-slate-500"> /mes</span></p>` : ''}
+    <p class="text-slate-600">${subs ? 'Te vamos a llevar a Mercado Pago para que elijas tu medio de pago. El abono se debita solo cada mes y lo podés cancelar cuando quieras.' : 'Te vamos a llevar a Mercado Pago para que pagues el abono del mes.'}</p>
+    <button class="btn text-white w-full py-3" style="background:#009ee3" onclick="closeModal();payLic()"><span class="mp-logo" style="--mc:#fff;color:#009ee3;background:#fff">MP</span> ${subs ? 'Suscribirme con Mercado Pago' : 'Pagar con Mercado Pago'}</button>
+    <button class="btn btn-l w-full" onclick="closeModal()">Ahora no</button></div>`);
 }
 function ackAbonoAviso() {
   DB.avisos = Object.assign({}, DB.avisos, {abono: {ts: Date.now(), por: ME.id, nombre: ME.name}}); save();
@@ -593,7 +619,7 @@ function acceptLegal() {
   if (!$('#lg-ok').checked) return;
   DB.legal = {version: LEGAL_VERSION, ts: Date.now(), por: ME.id, nombre: ME.name}; save();
   closeModal(); render();
-  if (needAbonoAviso()) setTimeout(showAbonoAviso, 300); else toast('¡Gracias! Condiciones aceptadas.');
+  if (needAbonoAviso()) setTimeout(showAbonoAviso, 300); else if (sessionStorage.getItem(SUB_FLAG)) setTimeout(postLoginSub, 300); else toast('¡Gracias! Condiciones aceptadas.');
 }
 function go(v, id) { location.hash = '#/' + v + (id ? '/' + id : ''); }
 window.addEventListener('hashchange', () => { if (ME) render(); });

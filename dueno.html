@@ -192,7 +192,7 @@ const sameKey = (a, b) => a && b && a.x === b.x && a.y === b.y;
 async function gh(path, opt = {}) {
   const r = await fetch('https://api.github.com/repos/' + repo() + path, {...opt, cache: 'no-store', headers: {Authorization: 'Bearer ' + tok(), Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.headers || {})}});
   if (r.status === 404 && opt.allow404) return null;
-  if (!r.ok) { const e = await r.json().catch(() => ({})); const err = new Error((r.status === 401 ? 'Token inválido o vencido' : r.status === 409 ? 'conflicto' : r.status === 403 || r.status === 404 ? 'El token no tiene permiso sobre ' + repo() : 'GitHub ' + r.status) + (e.message && r.status !== 409 ? ' — ' + e.message : '')); err.status = r.status; throw err; }
+  if (!r.ok) { const e = await r.json().catch(() => ({})); const err = new Error((r.status === 401 ? 'Token inválido o vencido' : r.status === 409 ? 'conflicto' : r.status === 403 && opt.method === 'PUT' ? 'Al token le falta el permiso «Contents: Read and write». Editalo en GitHub → Settings → Fine-grained tokens → Add permissions → Contents → Read and write → Update' : r.status === 403 || r.status === 404 ? 'El token no tiene permiso sobre ' + repo() : 'GitHub ' + r.status) + (e.message && r.status !== 409 && !(r.status === 403 && opt.method === 'PUT') ? ' — ' + e.message : '')); err.status = r.status; throw err; }
   return r.json();
 }
 async function getFile(name) { const j = await gh('/contents/' + name, {allow404: true}); return j ? {sha: j.sha, text: b64utf8(j.content)} : null; }
@@ -226,6 +226,9 @@ function disconnect() { if (!confirm('¿Quitar el token de este navegador? (la l
 function keyCard() {
   const local = privJwk(), ok = local && sameKey(pubOf(local), REMOTE_PUB);
   if (ok) return `<div class="card p-4 flex flex-wrap items-center gap-3 text-sm"><i class="fas fa-shield-halved text-green-600"></i><span class="flex-1">Licencia firmada: nadie puede habilitar el sistema sin esta llave.</span><button class="btn b-l" onclick="downloadKey()"><i class="fas fa-download"></i> Respaldar llave</button></div>`;
+  if (local && !REMOTE_PUB) return `<div class="card p-5 border-amber-300 bg-amber-50"><p class="font-bold"><i class="fas fa-key text-amber-600 mr-1"></i>La llave está creada en este navegador pero falta publicarla</p>
+    <p class="text-sm text-slate-600 mt-1">El token necesita el permiso <b>Contents: Read and write</b> sobre <code>diegopohl</code>. Revisalo en <a class="underline text-sky-700" target="_blank" rel="noopener" href="https://github.com/settings/personal-access-tokens">GitHub → Fine-grained tokens</a> y después tocá «Publicar la llave».</p>
+    <div class="flex flex-wrap gap-2 mt-3"><button class="btn b-d" onclick="publishKey()"><i class="fas fa-cloud-arrow-up"></i> Publicar la llave</button><button class="btn b-l" onclick="downloadKey()"><i class="fas fa-download"></i> Respaldar llave</button></div></div>`;
   return `<div class="card p-5 border-amber-300 bg-amber-50">
     <p class="font-bold"><i class="fas fa-key text-amber-600 mr-1"></i>${REMOTE_PUB ? 'Este navegador no tiene la llave de firma' : 'Falta crear la llave de firma'}</p>
     <p class="text-sm text-slate-600 mt-1">${REMOTE_PUB ? 'Importá el archivo de respaldo de la llave para poder publicar cambios.' : 'Con la llave, el sistema de Diego solo acepta licencias publicadas desde este panel: si alguien modifica el archivo o los datos del navegador, se bloquea.'}</p>
@@ -237,12 +240,15 @@ async function createKey() {
     const kp = await crypto.subtle.generateKey({name: 'ECDSA', namedCurve: 'P-256'}, true, ['sign', 'verify']);
     const priv = await crypto.subtle.exportKey('jwk', kp.privateKey), pub = pubOf(await crypto.subtle.exportKey('jwk', kp.publicKey));
     localStorage.setItem(KK, JSON.stringify(priv)); downloadKey();
-    const k = await getFile(KEYFILE);
+    await publishKey();
+  } catch (e) { toast(e.message, 9000); show(); }
+}
+async function publishKey() {
+  try {
+    const pub = pubOf(privJwk()), k = await getFile(KEYFILE);
     await putFile(KEYFILE, `/* Clave pública de la licencia (la privada la tiene solo el dueño del sistema). */\nwindow.POHL_LIC_PUB = ${JSON.stringify(pub)};\n`, 'Licencia: clave pública de firma', k && k.sha);
-    REMOTE_PUB = pub;
-    await publish('Abono: licencia firmada');
-    show(); toast('Llave creada y licencia firmada. Guardá el archivo descargado en un lugar seguro.', 6000);
-  } catch (e) { toast(e.message, 6000); }
+    REMOTE_PUB = pub; await publish('Abono: licencia firmada'); show(); toast('Llave publicada y licencia firmada ✔', 5000);
+  } catch (e) { toast(e.message, 9000); }
 }
 function downloadKey() { const k = localStorage.getItem(KK); if (k) dl('pohl-llave-privada-NO-COMPARTIR.json', k, 'application/json'); }
 function importKey(inp) {
@@ -302,7 +308,7 @@ function readForm() {
   if (LIC.vence) LIC.diaVencimiento = new Date(LIC.vence + 'T12:00').getDate();
 }
 async function run(fn, okMsg) { try { await fn(); show(); toast(okMsg); } catch (e) { toast(e.message, 6000); show(); } }
-function needKey() { const l = privJwk(); if (!l || !sameKey(pubOf(l), REMOTE_PUB)) { toast('Primero creá o importá la llave de firma (arriba)'); return true; } return false; }
+function needKey() { const l = privJwk(); if (!l || !sameKey(pubOf(l), REMOTE_PUB)) { toast(l && !REMOTE_PUB ? 'Falta publicar la llave: tocá «Publicar la llave» (arriba)' : 'Primero creá o importá la llave de firma (arriba)'); window.scrollTo(0, 0); return true; } return false; }
 function saveConfig() {
   if (needKey()) return;
   if (!okLink($('#c-link').value.trim())) return toast('El link tiene que ser de Mercado Pago (https://…mercadopago.com.ar o mpago.la)');

@@ -34,10 +34,22 @@
 <body class="min-h-screen">
 <header class="text-white"><div class="max-w-5xl mx-auto px-4 sm:px-5 py-5 flex items-center justify-between gap-3">
   <div><p class="lbl !text-sky-400">Panel del dueño del sistema</p><h1 class="text-xl sm:text-2xl font-extrabold">Abonos · POHL Taller</h1></div>
-  <button id="btn-out" class="hidden text-xs text-white/50 hover:text-white" onclick="disconnect()"><i class="fas fa-right-from-bracket mr-1"></i>Desconectar</button>
+  <button id="btn-out" class="hidden text-xs text-white/50 hover:text-white" onclick="lockPanel()"><i class="fas fa-lock mr-1"></i>Bloquear</button>
 </div></header>
 
 <main class="max-w-5xl mx-auto px-4 sm:px-5 pb-16">
+  <!-- PIN -->
+  <section id="v-pin" class="hidden card p-6 sm:p-8 max-w-sm mx-auto mt-6 text-center">
+    <div class="w-14 h-14 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center mx-auto mb-3"><i class="fas fa-lock fa-lg"></i></div>
+    <p class="lbl">Acceso del dueño</p>
+    <h2 class="text-xl font-extrabold mt-1">Ingresá tu PIN</h2>
+    <form onsubmit="event.preventDefault();unlock()" class="space-y-3 mt-5">
+      <input id="pin-in" class="inp text-center text-2xl tracking-[.4em] font-mono" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••">
+      <button class="btn b-d w-full">Entrar <i class="fas fa-arrow-right"></i></button>
+    </form>
+    <button class="text-xs text-slate-400 underline mt-4" onclick="forgotPin()">Olvidé el PIN</button>
+  </section>
+
   <!-- CONEXIÓN -->
   <section id="v-login" class="hidden card p-5 sm:p-8 max-w-xl">
     <p class="lbl">Acceso</p>
@@ -51,8 +63,9 @@
     <div class="space-y-3 mt-5">
       <input id="l-repo" class="inp font-mono" value="cesar385/diegopohl" autocapitalize="none" autocorrect="off" spellcheck="false">
       <input id="l-token" class="inp font-mono" type="password" placeholder="github_pat_…" autocomplete="off">
+      <div class="grid grid-cols-2 gap-3"><input id="l-pin" class="inp font-mono" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Elegí un PIN"><input id="l-pin2" class="inp font-mono" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Repetí el PIN"></div>
       <button class="btn b-d w-full" onclick="connect()">Conectar <i class="fas fa-arrow-right"></i></button>
-      <p class="text-xs text-slate-400"><i class="fas fa-lock mr-1"></i>El token queda guardado solo en este navegador. No lo uses en una computadora compartida.</p>
+      <p class="text-xs text-slate-400"><i class="fas fa-lock mr-1"></i>El token y la llave de firma quedan guardados <b>cifrados con tu PIN</b> en este navegador. La próxima vez entrás solo con el PIN.</p>
     </div>
   </section>
 
@@ -151,6 +164,10 @@
     <p class="text-xs text-white/40 text-center">Cada cambio se publica como un commit firmado en <span id="repo-name" class="font-mono"></span>. El sistema de Diego lo toma en 1 o 2 minutos.</p>
   </section>
 </main>
+<footer class="max-w-5xl mx-auto px-4 sm:px-5 pb-8 text-center text-[11px] text-white/40 space-y-1">
+  <p>© <span class="yr">2026</span> POHL Chapa y Pintura · Todos los derechos reservados</p>
+  <p>Powered by <b class="text-white/60">Cesar Danderfert</b> · <a class="underline" href="terminos.html">Términos y condiciones</a> · <a class="underline" href="cookies.html">Política de cookies</a> · <a class="underline" href="./">Sistema</a></p>
+</footer>
 <div id="toast" class="bg-slate-900 text-white text-sm font-semibold px-4 py-3 rounded-xl shadow-xl border border-white/10"></div>
 
 <script>
@@ -162,13 +179,42 @@ const pad = n => String(n).padStart(2, '0');
 const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const fd = s => s ? new Date(s + 'T12:00').toLocaleDateString('es-AR') : '—';
 const TK = 'pohl_dueno_token', RP = 'pohl_dueno_repo', HK = 'pohl_dueno_pagos', KK = 'pohl_dueno_llave', TASA = 'pohl_dueno_tasa';
+document.querySelectorAll('.yr').forEach(e => e.textContent = new Date().getFullYear());
 const FILE = 'licencia.json', KEYFILE = 'licencia-clave.js', LIC_ID = 'diegopohl';
 let LIC = null, SHA = null, REMOTE_PUB = null;
 function toast(m, ms = 3200) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ms); }
-const tok = () => localStorage.getItem(TK), repo = () => localStorage.getItem(RP) || 'cesar385/diegopohl';
+let TOKEN = null, PRIV = null;
+const tok = () => TOKEN, repo = () => localStorage.getItem(RP) || 'cesar385/diegopohl';
 const hist = () => { try { return JSON.parse(localStorage.getItem(HK)) || []; } catch (e) { return []; } };
 const tasa = () => { const t = localStorage.getItem(TASA); return t === null ? 7.99 : num(t); };
-const privJwk = () => { try { return JSON.parse(localStorage.getItem(KK)); } catch (e) { return null; } };
+const privJwk = () => PRIV;
+/* ---------- bóveda: token y llave cifrados con el PIN (PBKDF2 + AES-GCM) ---------- */
+const VK = 'pohl_dueno_boveda', PIN_TRIES = 'pohl_dueno_intentos';
+const rnd = n => crypto.getRandomValues(new Uint8Array(n));
+const toB = u => btoa(String.fromCharCode(...new Uint8Array(u))), fromB = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function pinKey(pin, salt) { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']); return crypto.subtle.deriveKey({name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 310000}, k, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']); }
+let PIN = null;
+async function saveVault() {
+  if (!PIN) return; const salt = rnd(16), iv = rnd(12);
+  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, await pinKey(PIN, salt), new TextEncoder().encode(JSON.stringify({token: TOKEN, llave: PRIV})));
+  localStorage.setItem(VK, JSON.stringify({salt: toB(salt), iv: toB(iv), ct: toB(ct)}));
+  localStorage.removeItem(TK); localStorage.removeItem(KK);   // nada sin cifrar
+}
+async function openVault(pin) { const v = JSON.parse(localStorage.getItem(VK)); const pt = await crypto.subtle.decrypt({name: 'AES-GCM', iv: fromB(v.iv)}, await pinKey(pin, fromB(v.salt)), fromB(v.ct)); return JSON.parse(new TextDecoder().decode(pt)); }
+async function unlock() {
+  const t = JSON.parse(localStorage.getItem(PIN_TRIES) || '{"n":0,"until":0}');
+  if (t.until > Date.now()) return toast('Demasiados intentos. Esperá ' + Math.ceil((t.until - Date.now()) / 60e3) + ' min.');
+  const pin = $('#pin-in').value; if (!pin) return;
+  try { const d = await openVault(pin); TOKEN = d.token; PRIV = d.llave; PIN = pin; localStorage.removeItem(PIN_TRIES); $('#pin-in').value = ''; }
+  catch (e) { t.n++; if (t.n >= 5) { t.until = Date.now() + 10 * 60e3; t.n = 0; } localStorage.setItem(PIN_TRIES, JSON.stringify(t)); $('#pin-in').value = ''; return toast(t.until > Date.now() ? 'Demasiados intentos: bloqueado 10 min' : 'PIN incorrecto'); }
+  $('#v-pin').classList.add('hidden');
+  try { await load(); show(); } catch (e) { toast(e.message, 8000); $('#v-login').classList.remove('hidden'); }
+}
+function lockPanel() { TOKEN = PRIV = PIN = null; location.reload(); }
+function forgotPin() {
+  if (!confirm('Se borran el token y la llave guardados en este navegador. Vas a tener que pegar el token de nuevo y elegir un PIN nuevo; la llave la recuperás importando el archivo de respaldo (pohl-llave-privada…json). ¿Seguir?')) return;
+  localStorage.removeItem(VK); localStorage.removeItem(PIN_TRIES); location.reload();
+}
 
 /* ---------- utilidades de codificación y firma ---------- */
 const utf8b64 = s => btoa(unescape(encodeURIComponent(s)));
@@ -216,10 +262,17 @@ async function publish(msg) {
 }
 async function connect() {
   const t = $('#l-token').value.trim(); if (!t) return toast('Pegá el token');
-  localStorage.setItem(TK, t); localStorage.setItem(RP, $('#l-repo').value.trim() || 'cesar385/diegopohl');
-  try { await load(); show(); $('#l-token').value = ''; toast('Conectado'); } catch (e) { localStorage.removeItem(TK); toast(e.message, 6000); }
+  const p1 = $('#l-pin').value, p2 = $('#l-pin2').value;
+  if (p1.length < 4) return toast('El PIN tiene que tener al menos 4 números o letras'); if (p1 !== p2) return toast('Los PIN no coinciden');
+  localStorage.setItem(RP, $('#l-repo').value.trim() || 'cesar385/diegopohl');
+  TOKEN = t;
+  try {
+    await load();
+    if (!PRIV) { try { PRIV = JSON.parse(localStorage.getItem(KK)); } catch (e) {} }   // llave guardada sin cifrar de antes
+    PIN = p1; await saveVault(); show(); $('#l-token').value = $('#l-pin').value = $('#l-pin2').value = ''; toast('Conectado. Desde ahora entrás con tu PIN.');
+  } catch (e) { TOKEN = null; toast(e.message, 6000); }
 }
-function disconnect() { if (!confirm('¿Quitar el token de este navegador? (la llave de firma queda guardada)')) return; localStorage.removeItem(TK); location.reload(); }
+
 
 /* ---------- llave de firma ---------- */
 function keyCard() {
@@ -238,7 +291,7 @@ async function createKey() {
   try {
     const kp = await crypto.subtle.generateKey({name: 'ECDSA', namedCurve: 'P-256'}, true, ['sign', 'verify']);
     const priv = await crypto.subtle.exportKey('jwk', kp.privateKey), pub = pubOf(await crypto.subtle.exportKey('jwk', kp.publicKey));
-    localStorage.setItem(KK, JSON.stringify(priv)); downloadKey();
+    PRIV = priv; await saveVault(); downloadKey();
     await publishKey();
   } catch (e) { toast(e.message, 9000); show(); }
 }
@@ -249,10 +302,10 @@ async function publishKey() {
     REMOTE_PUB = pub; await publish('Abono: licencia firmada'); show(); toast('Llave publicada y licencia firmada ✔', 5000);
   } catch (e) { toast(e.message, 9000); }
 }
-function downloadKey() { const k = localStorage.getItem(KK); if (k) dl('pohl-llave-privada-NO-COMPARTIR.json', k, 'application/json'); }
+function downloadKey() { const k = PRIV && JSON.stringify(PRIV); if (k) dl('pohl-llave-privada-NO-COMPARTIR.json', k, 'application/json'); }
 function importKey(inp) {
   const f = inp.files[0]; if (!f) return;
-  f.text().then(t => { try { const j = JSON.parse(t); if (!j.d || !sameKey(pubOf(j), REMOTE_PUB)) throw 0; localStorage.setItem(KK, JSON.stringify(j)); show(); toast('Llave importada'); } catch (e) { toast('Ese archivo no es la llave de este sistema'); } });
+  f.text().then(t => { try { const j = JSON.parse(t); if (!j.d || !sameKey(pubOf(j), REMOTE_PUB)) throw 0; PRIV = j; saveVault(); show(); toast('Llave importada'); } catch (e) { toast('Ese archivo no es la llave de este sistema'); } });
 }
 
 /* ---------- vista ---------- */
@@ -278,7 +331,7 @@ function show() {
   const tot = h.filter(p => p.fecha.startsWith(year)).reduce((a, p) => a + num(p.monto), 0), totNeto = h.filter(p => p.fecha.startsWith(year)).reduce((a, p) => a + num(p.neto ?? neto(p.monto)), 0);
   $('#stats').innerHTML = [
     ['Estado', `<span class="pill ${st[1]}">${st[0]}</span><p class="text-xs text-slate-500 mt-1">${st[2]}</p>`],
-    ['Abono mensual', `<p class="text-xl sm:text-2xl font-extrabold">${num(LIC.monto) ? money(LIC.monto) : '—'}</p>${num(LIC.monto) ? `<p class="text-xs text-slate-500">Te llegan ${money(neto(LIC.monto))}</p>` : ''}`],
+    ['Abono mensual', `<p class="text-xl sm:text-2xl font-extrabold">${num(LIC.monto) ? money(LIC.monto) : '<span class="text-amber-600 text-base">Falta cargar el precio</span>'}</p>${num(LIC.monto) ? `<p class="text-xs text-slate-500">Te llegan ${money(neto(LIC.monto))}</p>` : ''}`],
     ['Próximo vencimiento', `<p class="text-xl sm:text-2xl font-extrabold">${fd(LIC.vence)}</p>`],
     ['Cobrado en ' + year, `<p class="text-xl sm:text-2xl font-extrabold text-green-600">${money(tot)}</p><p class="text-xs text-slate-500">Neto ${money(totNeto)}</p>`]
   ].map(([l, v]) => `<div class="card p-4 min-w-0"><p class="lbl mb-2">${l}</p>${v}</div>`).join('');
@@ -357,8 +410,11 @@ function exportHist() { dl('abonos_pohl_respaldo.json', JSON.stringify(hist()), 
 function importHist(inp) { const f = inp.files[0]; if (!f) return; f.text().then(t => { try { const a = JSON.parse(t); if (!Array.isArray(a)) throw 0; const h = hist(); a.forEach(p => { if (!h.some(x => x.ts === p.ts)) h.push(p); }); h.sort((x, y) => x.fecha.localeCompare(y.fecha)); localStorage.setItem(HK, JSON.stringify(h)); show(); toast('Historial importado'); } catch (e) { toast('Archivo inválido'); } }); }
 
 (async () => {
-  if (!tok()) { $('#v-login').classList.remove('hidden'); return; }
-  try { await load(); show(); } catch (e) { toast(e.message, 6000); $('#v-login').classList.remove('hidden'); $('#l-repo').value = repo(); }
+  $('#l-repo').value = repo();
+  if (localStorage.getItem(VK)) { $('#v-pin').classList.remove('hidden'); setTimeout(() => $('#pin-in').focus(), 50); return; }
+  const legacy = localStorage.getItem(TK);   // versión anterior: token sin cifrar → se pide PIN para cifrarlo
+  if (legacy) { $('#l-token').value = legacy; toast('Elegí un PIN para proteger tu acceso', 5000); }
+  $('#v-login').classList.remove('hidden');
 })();
 </script>
 </body>

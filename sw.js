@@ -5,7 +5,7 @@
 const CACHE = 'pohl-taller-cache';
 self.addEventListener('install', e => {
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html', './seguimiento.html', './img-removebg-preview.png', './manifest.json', './vendor/app.css', './vendor/fa/css/fontawesome.min.css', './vendor/fa/css/solid.min.css', './vendor/fa/css/brands.min.css', './vendor/fa/webfonts/fa-solid-900.woff2', './vendor/fa/webfonts/fa-brands-400.woff2', './vendor/html2pdf.bundle.min.js', './vendor/qrcode.min.js']).catch(() => {})));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html', './seguimiento.html', './img-removebg-preview.png', './manifest.json', './terminos.html', './cookies.html', './vendor/app.css', './vendor/fa/css/fontawesome.min.css', './vendor/fa/css/solid.min.css', './vendor/fa/css/brands.min.css', './vendor/fa/webfonts/fa-solid-900.woff2', './vendor/fa/webfonts/fa-brands-400.woff2', './vendor/html2pdf.bundle.min.js', './vendor/qrcode.min.js']).catch(() => {})));
 });
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {

@@ -16,11 +16,13 @@
 <body class="min-h-screen">
 <header class="bg-black text-white"><div class="max-w-md mx-auto px-5 py-3 flex items-center justify-between"><img src="img-removebg-preview.png" class="h-10" alt="POHL" onerror="this.outerHTML='<b>POHL</b>'"><span class="mono text-[10px] uppercase text-white/60">Seguimiento</span></div></header>
 <main class="max-w-md mx-auto p-5" id="m"></main>
+<footer style="text-align:center;font-size:11px;color:#94a3b8;padding:18px 16px calc(18px + env(safe-area-inset-bottom));line-height:1.7">© <span class="yr">2026</span> POHL Chapa y Pintura · Todos los derechos reservados<br>Powered by <b style="color:#475569">Cesar Danderfert</b><br><a style="text-decoration:underline;margin:0 6px" href="terminos.html">Términos y condiciones</a><a style="text-decoration:underline;margin:0 6px" href="cookies.html">Política de cookies</a></footer>
 <script>
 const ST = [['recibido', 'Recibido', 'fa-car-side'], ['presupuesto', 'Presupuesto', 'fa-file-invoice-dollar'], ['aprobado', 'Aprobado', 'fa-thumbs-up'], ['reparacion', 'En reparación', 'fa-screwdriver-wrench'], ['listo', 'Listo para retirar', 'fa-key'], ['entregado', 'Entregado', 'fa-flag-checkered']];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const money = n => '$ ' + (Number(n) || 0).toLocaleString('es-AR', {maximumFractionDigits: 2});
 const dt = ts => new Date(ts).toLocaleDateString('es-AR', {day: 'numeric', month: 'short'}) + ' ' + new Date(ts).toLocaleTimeString('es-AR', {hour: '2-digit', minute: '2-digit'});
+document.querySelectorAll('.yr').forEach(e => e.textContent = new Date().getFullYear());
 let d = null;
 try { let h = location.hash.slice(1).replace(/-/g, '+').replace(/_/g, '/'); while (h.length % 4) h += '='; d = JSON.parse(decodeURIComponent(escape(atob(h)))); } catch (e) {}
 const m = document.getElementById('m');

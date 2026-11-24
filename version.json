@@ -1,8 +1,9 @@
 {
-  "version": "2.2.2",
+  "version": "2.3.0",
   "fecha": "2026-11-24",
   "notas": [
-    "Arreglo de la vista en computadora (menú lateral).",
+    "Nuevo selector de medio de pago con Mercado Pago.",
+    "Pie de página con términos y política de cookies.",
     "Tus datos se conservan."
   ]
 }

@@ -1,18 +1,4 @@
 {
-  "cliente": "POHL Chapa y Pintura (Diego Pohl)",
-  "plan": "Sistema de gestión del taller a medida",
-  "monto": 0,
-  "moneda": "ARS",
-  "vence": "2026-12-24",
-  "diaVencimiento": 24,
-  "avisoDias": 5,
-  "gracia": 0,
-  "estado": "activo",
-  "linkPago": "",
-  "alias": "",
-  "whatsappDueno": "",
-  "telefonoCliente": "3454497008",
-  "mensaje": "",
-  "ultimoPago": null,
-  "actualizado": "2026-11-24T16:30:00-03:00"
+  "token": "eyJpZCI6ImRpZWdvcG9obCIsImNsaWVudGUiOiJQT0hMIENoYXBhIHkgUGludHVyYSAoRGllZ28gUG9obCkiLCJwbGFuIjoiU2lzdGVtYSBkZSBnZXN0acOzbiBkZWwgdGFsbGVyIGEgbWVkaWRhIiwibW9udG8iOjAsInZlbmNlIjoiMjAyNi0xMi0yNCIsImF2aXNvRGlhcyI6NSwiZ3JhY2lhIjowLCJlc3RhZG8iOiJhY3Rpdm8iLCJtb25lZGEiOiJBUlMiLCJkaWFWZW5jaW1pZW50byI6MjQsImxpbmtQYWdvIjoiIiwiYWxpYXMiOiIiLCJ3aGF0c2FwcER1ZW5vIjoiIiwidGVsZWZvbm9DbGllbnRlIjoiMzQ1NDQ5NzAwOCIsIm1lbnNhamUiOiIiLCJ1bHRpbW9QYWdvIjpudWxsLCJhY3R1YWxpemFkbyI6IjIwMjYtMTEtMjRUMTY6MzA6MDAtMDM6MDAiLCJlbWl0aWRvIjoxNzk1NTUxMTM0MDUyfQ.98HJSai0ebH1OZ6jg0UKV_AJI724evokWp07ZJQbu6JR5wFMAh_ZP4tfZMM7FPk0y314fYgIxfCicZIZVmfgEA",
+  "actualizado": "2026-11-24T20:12:14.061Z"
 }

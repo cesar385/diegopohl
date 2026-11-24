@@ -189,7 +189,7 @@
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.5.1';
+const APP_VERSION = '2.5.2';
 const SCHEMA = 2;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -519,7 +519,7 @@ function showApp() {
   $('#me-name').textContent = ME.name; $('#me-role').textContent = ME.role === 'admin' ? 'Administrador' : 'Técnico';
   $('#ver-side').textContent = 'v' + APP_VERSION;
   if (!location.hash || location.hash === '#') location.hash = isAdmin() ? '#/panel' : '#/ordenes'; else render();
-  if (needLegal()) showLegal();
+  if (needLegal()) showLegal(); else if (needAbonoAviso()) showAbonoAviso();
 }
 /* Términos y condiciones + política de cookies: se aceptan una sola vez (se vuelve a pedir solo si cambian). */
 const LEGAL_VERSION = '2026-11-24';
@@ -539,10 +539,41 @@ function showLegal() {
     <button class="text-xs text-slate-400 underline mt-3 block mx-auto" onclick="closeModal();logout()">No acepto — cerrar sesión</button>
   </div>`, {locked: true});
 }
+/* Anuncio: el sistema pasa a abono mensual. Lo ve el administrador una sola vez (queda guardado y se sincroniza). */
+const needAbonoAviso = () => ME && isAdmin() && !(DB.avisos && DB.avisos.abono) && licState().s !== 'bloqueado';
+function showAbonoAviso() {
+  if ($('#abono-aviso')) return;
+  const m = LIC && num(LIC.monto), subs = licSubs();
+  modal(`<div id="abono-aviso">
+    <div class="p-6 sm:p-8 text-white" style="background:linear-gradient(135deg,#0f172a,#1e293b)">
+      <div class="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-4"><i class="fas fa-bullhorn fa-lg text-brand-500"></i></div>
+      <p class="eyebrow !text-white/60">Novedad importante</p>
+      <h2 class="text-2xl font-extrabold mt-1 leading-tight">A partir de ahora, el sistema pasa a un abono mensual</h2>
+      ${m ? `<p class="mt-4"><span class="text-4xl font-extrabold">${money(LIC.monto)}</span><span class="text-white/60"> /mes</span></p>` : ''}
+    </div>
+    <div class="p-6 sm:p-8 space-y-3 text-sm text-slate-600">
+      <p>Gracias por usar el sistema de gestión del taller, hecho a medida para <b>${esc(DB.config.nombre)}</b>. Para seguir mejorándolo y mantenerlo funcionando, desde ahora su uso tiene un <b>abono mensual</b>.</p>
+      <ul class="space-y-2">
+        <li class="flex gap-2"><i class="fas fa-circle-check text-green-600 mt-0.5"></i><span>Incluye todas las funciones, las actualizaciones y la nube para ver los datos en todos tus dispositivos.</span></li>
+        <li class="flex gap-2"><i class="fas fa-circle-check text-green-600 mt-0.5"></i><span>${subs ? 'Se paga con Mercado Pago y se debita solo cada mes; podés cancelarlo cuando quieras.' : 'Se paga con Mercado Pago, de forma simple y segura.'}</span></li>
+        ${LIC && LIC.vence ? `<li class="flex gap-2"><i class="fas fa-calendar-day text-brand-600 mt-0.5"></i><span>Primer vencimiento: <b>${licVence()}</b>. Si el abono no se paga, el sistema se pausa hasta regularizarlo; <b>tus datos nunca se borran</b>.</span></li>` : ''}
+      </ul>
+      <div class="grid gap-2 pt-2">
+        ${LIC && LIC.linkPago ? `<button class="btn text-white py-3" style="background:#009ee3" onclick="payLic()"><span class="mp-logo" style="--mc:#fff;color:#009ee3;background:#fff">MP</span> ${subs ? 'Suscribirme con Mercado Pago' : 'Pagar con Mercado Pago'}</button>` : ''}
+        <button class="btn btn-d" onclick="ackAbonoAviso()"><i class="fas fa-check"></i> Entendido</button>
+      </div>
+      <p class="text-[11px] text-slate-400 text-center">Lo podés ver cuando quieras en Configuración → Abono del sistema. <a class="underline" href="terminos.html" target="_blank">Términos y condiciones</a></p>
+    </div></div>`, {locked: true});
+}
+function ackAbonoAviso() {
+  DB.avisos = Object.assign({}, DB.avisos, {abono: {ts: Date.now(), por: ME.id, nombre: ME.name}}); save();
+  closeModal(); render();
+}
 function acceptLegal() {
   if (!$('#lg-ok').checked) return;
   DB.legal = {version: LEGAL_VERSION, ts: Date.now(), por: ME.id, nombre: ME.name}; save();
-  closeModal(); render(); toast('¡Gracias! Condiciones aceptadas.');
+  closeModal(); render();
+  if (needAbonoAviso()) setTimeout(showAbonoAviso, 300); else toast('¡Gracias! Condiciones aceptadas.');
 }
 function go(v, id) { location.hash = '#/' + v + (id ? '/' + id : ''); }
 window.addEventListener('hashchange', () => { if (ME) render(); });
@@ -563,7 +594,7 @@ function render() {
   const fn = views[v] || vOrdenes;
   $('#top-title').textContent = (NAV.find(n => n.v === active) || {t: ''}).t;
   $('#main').innerHTML = licBanner() + (fn(id) || '');
-  if (needLegal()) { if (!$('#legal-box')) showLegal(); } else if (licState().s === 'bloqueado') showLock();
+  if (needLegal()) { if (!$('#legal-box')) showLegal(); } else if (licState().s === 'bloqueado') showLock(); else if (needAbonoAviso() && !$('#modal-root').innerHTML) showAbonoAviso();
   window.scrollTo(0, 0);
   if (fn.after) fn.after(id);
 }
@@ -1589,6 +1620,7 @@ function merge3(B, L, R) {
   }
   if (B && !same(B.config, L.config)) M.config = L.config;
   if (L.legal && (!M.legal || (L.legal.ts || 0) > (M.legal.ts || 0))) M.legal = L.legal;
+  if (L.avisos) M.avisos = Object.assign({}, L.avisos, M.avisos);
   M.seq = {order: Math.max(num((L.seq || {}).order), num((R.seq || {}).order)), sale: Math.max(num((L.seq || {}).sale), num((R.seq || {}).sale))};
   // números repetidos (dos dispositivos crearon a la vez): se renumera el más nuevo
   const fix = (list, k) => { const seen = new Set(); list.slice().sort((a, b) => (a.createdAt || a.ts || 0) - (b.createdAt || b.ts || 0)).forEach(x => { if (seen.has(x.num)) x.num = ++M.seq[k]; seen.add(x.num); }); };

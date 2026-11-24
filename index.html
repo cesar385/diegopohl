@@ -25,7 +25,7 @@
 <script src="licencia-clave.js"></script>
 <style>
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-  html,body{min-height:100%;} .hidden{display:none !important;}
+  html,body{min-height:100%;}
   body{overscroll-behavior-y:none;}
   button,a,label,select,input{touch-action:manipulation;}
   :root{--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px);}
@@ -166,7 +166,7 @@
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.2.1';
+const APP_VERSION = '2.2.2';
 const SCHEMA = 1;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -570,7 +570,7 @@ function vPanel() {
   const stat = (l, v, i, c = '') => `<div class="card p-4"><p class="lbl"><i class="fas ${i} mr-1"></i>${l}</p><p class="text-2xl font-extrabold mt-2 ${c}">${v}</p></div>`;
   return `
   <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
-    <div><p class="eyebrow">Hoy</p><h1 class="text-2xl sm:text-3xl font-extrabold capitalize">${d.toLocaleDateString('es-AR', {weekday: 'long', day: 'numeric', month: 'long'})}</h1></div>
+    <div><p class="eyebrow">Hoy</p><h1 class="text-2xl sm:text-3xl font-extrabold">${(t => t[0].toUpperCase() + t.slice(1))(d.toLocaleDateString('es-AR', {weekday: 'long', day: 'numeric', month: 'long'}))}</h1></div>
     <span class="pill ${closed ? 'bg-zinc-100 text-zinc-600' : 'bg-green-50 text-green-700'}">${closed ? 'Caja cerrada' : 'Caja abierta'}</span>
   </div>
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">

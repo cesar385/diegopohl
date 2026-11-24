@@ -1,8 +1,8 @@
 {
-  "version": "2.2.1",
+  "version": "2.2.2",
   "fecha": "2026-11-24",
   "notas": [
-    "Ya no se obliga a cambiar la contraseña ni a usar un formato determinado.",
+    "Arreglo de la vista en computadora (menú lateral).",
     "Tus datos se conservan."
   ]
 }

@@ -2,46 +2,56 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Panel del dueño — POHL Taller</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="vendor/app.css">
+<link rel="stylesheet" href="vendor/fa/css/fontawesome.min.css">
+<link rel="stylesheet" href="vendor/fa/css/solid.min.css">
+<link rel="stylesheet" href="vendor/fa/css/brands.min.css">
 <style>
-  body{font-family:Inter,system-ui,sans-serif;background:#0b1220;color:#0f172a}
-  .hidden{display:none}
+  html{-webkit-text-size-adjust:100%}
+  body{font-family:Inter,system-ui,sans-serif;background:#0b1220;color:#0f172a;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .hidden{display:none !important}
   .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#64748b;font-weight:700}
   .card{background:#fff;border-radius:16px;border:1px solid #e5e7eb}
-  .inp{width:100%;border:1px solid #d9dde3;border-radius:10px;padding:9px 12px;font-size:14px;outline:none;background:#fff}
+  .inp{width:100%;min-width:0;border:1px solid #d9dde3;border-radius:10px;padding:10px 12px;font-size:16px;outline:none;background:#fff}
   .inp:focus{border-color:#009ee3;box-shadow:0 0 0 3px rgba(0,158,227,.15)}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:9px 14px;font-weight:700;font-size:14px}
+  .btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:9px 14px;font-weight:700;font-size:14px;touch-action:manipulation}
   .b-mp{background:#009ee3;color:#fff}.b-mp:hover{background:#0083bd}
   .b-d{background:#0f172a;color:#fff}.b-l{background:#fff;border:1px solid #d9dde3}.b-r{background:#fee2e2;color:#b91c1c}.b-g{background:#16a34a;color:#fff}
   .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700}
-  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;display:none}
+  #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:50;display:none;max-width:calc(100vw - 32px);text-align:center}
+  details summary{cursor:pointer;list-style:none} details summary::-webkit-details-marker{display:none}
+  ol.steps li{margin:.35rem 0}
 </style>
 </head>
 <body class="min-h-screen">
-<header class="text-white"><div class="max-w-5xl mx-auto px-5 py-5 flex items-center justify-between">
-  <div><p class="lbl !text-sky-400">Panel del dueño del sistema</p><h1 class="text-2xl font-extrabold">Abonos · POHL Taller</h1></div>
+<header class="text-white"><div class="max-w-5xl mx-auto px-4 sm:px-5 py-5 flex items-center justify-between gap-3">
+  <div><p class="lbl !text-sky-400">Panel del dueño del sistema</p><h1 class="text-xl sm:text-2xl font-extrabold">Abonos · POHL Taller</h1></div>
   <button id="btn-out" class="hidden text-xs text-white/50 hover:text-white" onclick="disconnect()"><i class="fas fa-right-from-bracket mr-1"></i>Desconectar</button>
 </div></header>
 
-<main class="max-w-5xl mx-auto px-5 pb-16">
+<main class="max-w-5xl mx-auto px-4 sm:px-5 pb-16">
   <!-- CONEXIÓN -->
-  <section id="v-login" class="hidden card p-6 sm:p-8 max-w-xl">
+  <section id="v-login" class="hidden card p-5 sm:p-8 max-w-xl">
     <p class="lbl">Acceso</p>
     <h2 class="text-xl font-extrabold mt-1">Conectá tu cuenta de GitHub</h2>
     <p class="text-sm text-slate-500 mt-2">Este panel no usa el usuario de Diego. La llave es un <b>token de GitHub</b> con permiso de escritura solo sobre el repositorio del sistema: sin ese token nadie puede cambiar el abono, aunque abra esta página.</p>
-    <ol class="text-sm text-slate-600 mt-4 space-y-1 list-decimal pl-5">
-      <li>Abrí <a class="text-sky-600 underline" target="_blank" href="https://github.com/settings/personal-access-tokens/new">GitHub → Fine-grained token nuevo</a>.</li>
+    <ol class="steps text-sm text-slate-600 mt-4 list-decimal pl-5">
+      <li>Abrí <a class="text-sky-600 underline" target="_blank" rel="noopener" href="https://github.com/settings/personal-access-tokens/new">GitHub → Fine-grained token nuevo</a>.</li>
       <li>En <b>Repository access</b> elegí <i>Only select repositories</i> → <code>diegopohl</code>.</li>
-      <li>En <b>Permissions → Contents</b> elegí <i>Read and write</i>. Generá y copiá el token.</li>
+      <li>En <b>Permissions → Contents</b> elegí <i>Read and write</i>. Poné un vencimiento (por ejemplo 1 año), generá y copiá el token.</li>
     </ol>
     <div class="space-y-3 mt-5">
-      <input id="l-repo" class="inp font-mono" value="cesar385/diegopohl">
-      <input id="l-token" class="inp font-mono" type="password" placeholder="github_pat_…">
+      <input id="l-repo" class="inp font-mono" value="cesar385/diegopohl" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <input id="l-token" class="inp font-mono" type="password" placeholder="github_pat_…" autocomplete="off">
       <button class="btn b-d w-full" onclick="connect()">Conectar <i class="fas fa-arrow-right"></i></button>
       <p class="text-xs text-slate-400"><i class="fas fa-lock mr-1"></i>El token queda guardado solo en este navegador. No lo uses en una computadora compartida.</p>
     </div>
@@ -49,19 +59,20 @@
 
   <!-- PANEL -->
   <section id="v-panel" class="hidden space-y-4">
-    <div class="grid sm:grid-cols-4 gap-3" id="stats"></div>
+    <div id="key-card"></div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3" id="stats"></div>
 
     <div class="grid lg:grid-cols-3 gap-4">
-      <div class="lg:col-span-2 space-y-4">
+      <div class="lg:col-span-2 space-y-4 min-w-0">
         <div class="card p-5">
-          <div class="flex flex-wrap justify-between items-center gap-2"><p class="lbl">Registrar pago recibido</p><span class="text-xs text-slate-400">Corre el vencimiento un mes y desbloquea el sistema</span></div>
-          <div class="grid sm:grid-cols-4 gap-3 mt-3">
+          <div class="flex flex-wrap justify-between items-center gap-2"><p class="lbl">Registrar pago recibido</p><span class="text-xs text-slate-400">Corre el vencimiento y desbloquea el sistema</span></div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
             <div><label class="text-xs text-slate-500">Fecha</label><input id="p-fecha" class="inp" type="date"></div>
-            <div><label class="text-xs text-slate-500">Monto $</label><input id="p-monto" class="inp" type="number" step="any"></div>
+            <div><label class="text-xs text-slate-500">Monto cobrado $</label><input id="p-monto" class="inp" type="number" inputmode="decimal" step="any"></div>
             <div><label class="text-xs text-slate-500">Medio</label><select id="p-medio" class="inp"><option>Mercado Pago</option><option>Transferencia</option><option>Efectivo</option></select></div>
-            <div><label class="text-xs text-slate-500">Meses que paga</label><input id="p-meses" class="inp" type="number" min="1" value="1"></div>
+            <div><label class="text-xs text-slate-500">Meses que paga</label><input id="p-meses" class="inp" type="number" inputmode="numeric" min="1" value="1"></div>
           </div>
-          <input id="p-ref" class="inp mt-3" placeholder="Nº de operación de Mercado Pago (opcional)">
+          <input id="p-ref" class="inp mt-3" placeholder="Nº de operación de Mercado Pago (opcional)" inputmode="numeric">
           <button class="btn b-g w-full mt-3" onclick="registerPay()"><i class="fas fa-check"></i> Registrar pago y publicar</button>
         </div>
 
@@ -70,38 +81,75 @@
           <div class="grid sm:grid-cols-2 gap-3">
             <div class="sm:col-span-2"><label class="text-xs text-slate-500">Cliente</label><input id="c-cliente" class="inp"></div>
             <div class="sm:col-span-2"><label class="text-xs text-slate-500">Plan</label><input id="c-plan" class="inp"></div>
-            <div><label class="text-xs text-slate-500">Abono mensual $</label><input id="c-monto" class="inp" type="number" step="any"></div>
+            <div><label class="text-xs text-slate-500">Precio del abono $ (lo que paga Diego)</label><input id="c-monto" class="inp" type="number" inputmode="decimal" step="any" oninput="calcNeto()"></div>
+            <div><label class="text-xs text-slate-500">Tasa de Mercado Pago % (incluida en el precio)</label><input id="c-tasa" class="inp" type="number" inputmode="decimal" step="0.01" oninput="calcNeto()"></div>
+            <div class="sm:col-span-2 rounded-xl bg-sky-50 text-sky-900 text-sm p-3" id="neto-box"></div>
+            <div class="sm:col-span-2 flex flex-wrap gap-2 items-end"><div class="flex-1 min-w-[160px]"><label class="text-xs text-slate-500">¿Cuánto querés que te quede limpio por mes? $</label><input id="c-quiero" class="inp" type="number" inputmode="decimal" step="any"></div><button class="btn b-l" onclick="fromNeto()">Calcular precio</button></div>
             <div><label class="text-xs text-slate-500">Próximo vencimiento</label><input id="c-vence" class="inp" type="date"></div>
-            <div><label class="text-xs text-slate-500">Avisar desde (días antes)</label><input id="c-aviso" class="inp" type="number" min="0"></div>
-            <div><label class="text-xs text-slate-500">Días de gracia antes de bloquear</label><input id="c-gracia" class="inp" type="number" min="0"></div>
-            <div class="sm:col-span-2"><label class="text-xs text-slate-500">Link de pago de Mercado Pago (link de pago o suscripción de tu cuenta)</label><div class="flex gap-2"><input id="c-link" class="inp font-mono text-xs" placeholder="https://mpago.la/… o https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=…"><button class="btn b-l" onclick="window.open($('#c-link').value,'_blank')" title="Probar"><i class="fas fa-up-right-from-square"></i></button></div></div>
-            <div><label class="text-xs text-slate-500">Alias / CVU (opcional)</label><input id="c-alias" class="inp font-mono"></div>
-            <div><label class="text-xs text-slate-500">Tu WhatsApp (para "Ya pagué")</label><input id="c-wa" class="inp" placeholder="3454…"></div>
-            <div><label class="text-xs text-slate-500">WhatsApp del cliente</label><input id="c-tel" class="inp"></div>
+            <div><label class="text-xs text-slate-500">Avisar desde (días antes)</label><input id="c-aviso" class="inp" type="number" inputmode="numeric" min="0"></div>
+            <div><label class="text-xs text-slate-500">Días de gracia (0 = se bloquea al vencer)</label><input id="c-gracia" class="inp" type="number" inputmode="numeric" min="0"></div>
             <div><label class="text-xs text-slate-500">Estado</label><select id="c-estado" class="inp"><option value="activo">Activo (según vencimiento)</option><option value="suspendido">Suspendido manualmente</option></select></div>
+            <div class="sm:col-span-2"><label class="text-xs text-slate-500">Link de pago de Mercado Pago</label><div class="flex gap-2"><input id="c-link" class="inp font-mono text-xs" placeholder="https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=… o https://mpago.la/…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn b-l" onclick="openLink()" title="Probar"><i class="fas fa-up-right-from-square"></i></button></div></div>
+            <div><label class="text-xs text-slate-500">Alias / CVU (opcional)</label><input id="c-alias" class="inp font-mono" autocapitalize="none"></div>
+            <div><label class="text-xs text-slate-500">Tu WhatsApp (para "Ya pagué")</label><input id="c-wa" class="inp" type="tel" placeholder="3454…"></div>
+            <div><label class="text-xs text-slate-500">WhatsApp del cliente</label><input id="c-tel" class="inp" type="tel"></div>
             <div class="sm:col-span-2"><label class="text-xs text-slate-500">Mensaje en la pantalla de bloqueo (opcional)</label><input id="c-msg" class="inp"></div>
           </div>
           <button class="btn b-d w-full mt-4" onclick="saveConfig()"><i class="fas fa-cloud-arrow-up"></i> Guardar y publicar</button>
         </div>
+
+        <details class="card p-5" id="mp-help">
+          <summary class="flex justify-between items-center"><span class="lbl">Cómo crear el link de Mercado Pago</span><i class="fas fa-chevron-down text-slate-400"></i></summary>
+          <div class="text-sm text-slate-700 mt-4 space-y-4">
+            <div>
+              <p class="font-bold">Opción recomendada: plan de suscripción (cobra solo todos los meses)</p>
+              <ol class="steps list-decimal pl-5 mt-1">
+                <li>Entrá a <a class="text-sky-600 underline" target="_blank" rel="noopener" href="https://www.mercadopago.com.ar/herramientas-para-vender/suscripciones">mercadopago.com.ar → Planes de suscripción</a> con <b>tu</b> cuenta (en la app: <i>Tu negocio → Cobros → Suscripciones</i>). Si es la primera vez, tocá <i>Cobrar con un plan de suscripción</i>.</li>
+                <li>Tocá <b>Crear nuevo plan</b>. Nombre: <i>Sistema del taller POHL</i>. Precio: el <b>precio del abono</b> de este panel (ya incluye el 7,99%). Frecuencia: <b>Mensual</b>.</li>
+                <li>En <b>Más opciones</b>: fecha de facturación = el mismo día que el vencimiento de acá; prueba gratis: <b>Sin prueba gratis</b>; duración: <b>Ilimitada</b>.</li>
+                <li>En <i>Costos y plazos</i> de tu cuenta elegí la acreditación que corresponde a la tasa del 7,99% (dinero al instante).</li>
+                <li>Guardá el plan, tocá <b>Compartir</b> → <b>Copiar link</b> y pegalo arriba en «Link de pago». Guardá y publicá.</li>
+              </ol>
+              <p class="text-xs text-slate-500 mt-1">Diego entra una sola vez al link, elige la tarjeta y queda suscripto. Cada mes Mercado Pago le cobra y te avisa: vos registrás el pago acá.</p>
+            </div>
+            <div>
+              <p class="font-bold">Alternativa: link de pago (Diego paga mes a mes)</p>
+              <ol class="steps list-decimal pl-5 mt-1">
+                <li>En la app de Mercado Pago: <i>Cobrar → Link de pago</i> (en la web: <i>Tu negocio → Link de pago</i>).</li>
+                <li>Monto: el precio del abono. Descripción: <i>Abono mensual sistema POHL</i>. Elegí que se pueda pagar <b>más de una vez</b>.</li>
+                <li>Creá el link, copialo y pegalo arriba.</li>
+              </ol>
+            </div>
+            <p class="text-xs text-slate-500">En los dos casos la plata entra directo a tu cuenta de Mercado Pago. Si cambiás el precio, cambiá también el plan o el link.</p>
+          </div>
+        </details>
       </div>
 
-      <div class="space-y-4">
+      <div class="space-y-4 min-w-0">
         <div class="card p-5 space-y-2">
           <p class="lbl mb-1">Acciones rápidas</p>
           <button class="btn b-mp w-full" onclick="sendReminder()"><i class="fab fa-whatsapp"></i> Mandar recordatorio con link</button>
           <button class="btn b-l w-full" onclick="copyLink()"><i class="fas fa-link"></i> Copiar link de pago</button>
           <button id="btn-susp" class="btn b-r w-full" onclick="toggleSusp()"></button>
-          <a class="btn b-l w-full" href="./" target="_blank"><i class="fas fa-eye"></i> Ver el sistema de Diego</a>
+          <a class="btn b-l w-full" href="./" target="_blank" rel="noopener"><i class="fas fa-eye"></i> Ver el sistema de Diego</a>
+        </div>
+        <div class="card p-5 space-y-2">
+          <p class="lbl mb-1">Recuperar contraseña de Diego</p>
+          <p class="text-xs text-slate-500">Si Diego se olvida la contraseña, en el sistema toca «¿Olvidaste la contraseña?» y te manda un número de pedido. Generá el código acá (vale 24 h, un solo uso).</p>
+          <input id="r-pedido" class="inp font-mono uppercase" placeholder="Número de pedido" autocapitalize="characters" autocorrect="off" spellcheck="false">
+          <button class="btn b-d w-full" onclick="makeReset()"><i class="fas fa-key"></i> Generar código</button>
+          <textarea id="r-code" class="inp font-mono text-xs hidden" rows="3" readonly></textarea>
+          <button id="r-send" class="btn b-g w-full hidden" onclick="sendReset()"><i class="fab fa-whatsapp"></i> Enviar código a Diego</button>
         </div>
         <div class="card p-5">
           <div class="flex justify-between items-center mb-2"><p class="lbl">Pagos recibidos</p><button class="text-xs text-sky-600 font-bold" onclick="exportCSV()">CSV</button></div>
           <div id="hist" class="text-sm"></div>
-          <p class="text-[11px] text-slate-400 mt-3">El historial de montos se guarda en este navegador (el repositorio es público). El sistema de Diego solo ve el vencimiento y la fecha del último pago.</p>
-          <div class="flex gap-2 mt-2"><button class="text-xs underline text-slate-500" onclick="exportHist()">Respaldar historial</button><label class="text-xs underline text-slate-500 cursor-pointer">Importar<input type="file" class="hidden" accept=".json" onchange="importHist(this)"></label></div>
+          <p class="text-[11px] text-slate-400 mt-3">El historial de montos se guarda solo en este navegador (el repositorio es público). El sistema de Diego solo ve el vencimiento y la fecha del último pago.</p>
+          <div class="flex gap-3 mt-2"><button class="text-xs underline text-slate-500" onclick="exportHist()">Respaldar historial</button><label class="text-xs underline text-slate-500 cursor-pointer">Importar<input type="file" class="hidden" accept=".json" onchange="importHist(this)"></label></div>
         </div>
       </div>
     </div>
-    <p class="text-xs text-white/40 text-center">Cada cambio se publica como un commit en <span id="repo-name" class="font-mono"></span>. El sistema de Diego lo toma en 1 o 2 minutos.</p>
+    <p class="text-xs text-white/40 text-center">Cada cambio se publica como un commit firmado en <span id="repo-name" class="font-mono"></span>. El sistema de Diego lo toma en 1 o 2 minutos.</p>
   </section>
 </main>
 <div id="toast" class="bg-slate-900 text-white text-sm font-semibold px-4 py-3 rounded-xl shadow-xl border border-white/10"></div>
@@ -109,66 +157,136 @@
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; };
 const money = n => '$ ' + (Number(n) || 0).toLocaleString('es-AR', {maximumFractionDigits: 2});
 const pad = n => String(n).padStart(2, '0');
 const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const fd = s => s ? new Date(s + 'T12:00').toLocaleDateString('es-AR') : '—';
-const TK = 'pohl_dueno_token', RP = 'pohl_dueno_repo', HK = 'pohl_dueno_pagos', FILE = 'licencia.json';
-let LIC = null, SHA = null;
-function toast(m, ms = 3000) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ms); }
+const TK = 'pohl_dueno_token', RP = 'pohl_dueno_repo', HK = 'pohl_dueno_pagos', KK = 'pohl_dueno_llave', TASA = 'pohl_dueno_tasa';
+const FILE = 'licencia.json', KEYFILE = 'licencia-clave.js', LIC_ID = 'diegopohl';
+let LIC = null, SHA = null, REMOTE_PUB = null;
+function toast(m, ms = 3200) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ms); }
 const tok = () => localStorage.getItem(TK), repo = () => localStorage.getItem(RP) || 'cesar385/diegopohl';
 const hist = () => { try { return JSON.parse(localStorage.getItem(HK)) || []; } catch (e) { return []; } };
+const tasa = () => { const t = localStorage.getItem(TASA); return t === null ? 7.99 : num(t); };
+const privJwk = () => { try { return JSON.parse(localStorage.getItem(KK)); } catch (e) { return null; } };
 
+/* ---------- utilidades de codificación y firma ---------- */
+const utf8b64 = s => btoa(unescape(encodeURIComponent(s)));
+const b64utf8 = s => decodeURIComponent(escape(atob(s.replace(/\n/g, ''))));
+const b64u = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64uStr = s => b64u(new TextEncoder().encode(s));
+const b64uDec = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
+async function sign(obj) {
+  const jwk = privJwk(); if (!jwk) throw new Error('Falta la llave de firma en este navegador');
+  const key = await crypto.subtle.importKey('jwk', jwk, {name: 'ECDSA', namedCurve: 'P-256'}, false, ['sign']);
+  const txt = JSON.stringify(obj);
+  const sig = await crypto.subtle.sign({name: 'ECDSA', hash: 'SHA-256'}, key, new TextEncoder().encode(txt));
+  return b64uStr(txt) + '.' + b64u(sig);
+}
+const decodeToken = t => JSON.parse(new TextDecoder().decode(b64uDec(String(t).split('.')[0])));
+const pubOf = jwk => ({kty: jwk.kty, crv: jwk.crv, x: jwk.x, y: jwk.y});
+const sameKey = (a, b) => a && b && a.x === b.x && a.y === b.y;
+
+/* ---------- GitHub ---------- */
 async function gh(path, opt = {}) {
-  const r = await fetch('https://api.github.com/repos/' + repo() + path, {...opt, headers: {Authorization: 'Bearer ' + tok(), Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.headers || {})}});
-  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((r.status === 401 ? 'Token inválido o vencido' : r.status === 403 || r.status === 404 ? 'El token no tiene permiso sobre ' + repo() : 'GitHub ' + r.status) + (e.message ? ' — ' + e.message : '')); }
+  const r = await fetch('https://api.github.com/repos/' + repo() + path, {...opt, cache: 'no-store', headers: {Authorization: 'Bearer ' + tok(), Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.headers || {})}});
+  if (r.status === 404 && opt.allow404) return null;
+  if (!r.ok) { const e = await r.json().catch(() => ({})); const err = new Error((r.status === 401 ? 'Token inválido o vencido' : r.status === 409 ? 'conflicto' : r.status === 403 || r.status === 404 ? 'El token no tiene permiso sobre ' + repo() : 'GitHub ' + r.status) + (e.message && r.status !== 409 ? ' — ' + e.message : '')); err.status = r.status; throw err; }
   return r.json();
 }
+async function getFile(name) { const j = await gh('/contents/' + name, {allow404: true}); return j ? {sha: j.sha, text: b64utf8(j.content)} : null; }
+async function putFile(name, text, msg, sha) { const body = {message: msg, content: utf8b64(text)}; if (sha) body.sha = sha; const r = await gh('/contents/' + name, {method: 'PUT', body: JSON.stringify(body)}); return r.content.sha; }
+
 async function load() {
-  const j = await gh('/contents/' + FILE + '?t=' + Date.now(), {cache: 'no-store'});
-  SHA = j.sha; LIC = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g, '')))));
+  const f = await getFile(FILE);
+  SHA = f ? f.sha : null;
+  const raw = f ? JSON.parse(f.text) : {};
+  LIC = raw.token ? decodeToken(raw.token) : raw;   // formato firmado o el anterior sin firma
+  LIC = Object.assign({id: LIC_ID, cliente: 'POHL Chapa y Pintura (Diego Pohl)', plan: 'Sistema de gestión del taller a medida', monto: 0, vence: '', avisoDias: 5, gracia: 0, estado: 'activo'}, LIC);
+  const k = await getFile(KEYFILE);
+  REMOTE_PUB = null;
+  if (k) { const m = k.text.match(/POHL_LIC_PUB\s*=\s*(\{[^;]*\})/); if (m) try { REMOTE_PUB = JSON.parse(m[1]); } catch (e) {} }
 }
 async function publish(msg) {
-  LIC.actualizado = new Date().toISOString();
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(LIC, null, 2) + '\n')));
-  try { const r = await gh('/contents/' + FILE, {method: 'PUT', body: JSON.stringify({message: msg, content, sha: SHA})}); SHA = r.content.sha; }
-  catch (e) { if (String(e.message).includes('409') || String(e.message).includes('does not match')) { await load(); throw new Error('El archivo cambió en otro lado; se recargó. Repetí la acción.'); } throw e; }
+  LIC.id = LIC_ID; LIC.emitido = Date.now();
+  const token = await sign(LIC);
+  const text = JSON.stringify({token, actualizado: new Date().toISOString()}, null, 2) + '\n';
+  try { SHA = await putFile(FILE, text, msg, SHA); }
+  catch (e) { if (e.status === 409 || e.status === 422) { await load(); throw new Error('El archivo cambió en otro lado; se recargó. Repetí la acción.'); } throw e; }
 }
 async function connect() {
   const t = $('#l-token').value.trim(); if (!t) return toast('Pegá el token');
   localStorage.setItem(TK, t); localStorage.setItem(RP, $('#l-repo').value.trim() || 'cesar385/diegopohl');
-  try { await load(); show(); toast('Conectado'); } catch (e) { localStorage.removeItem(TK); toast(e.message, 6000); }
+  try { await load(); show(); $('#l-token').value = ''; toast('Conectado'); } catch (e) { localStorage.removeItem(TK); toast(e.message, 6000); }
 }
-function disconnect() { if (!confirm('¿Quitar el token de este navegador?')) return; localStorage.removeItem(TK); location.reload(); }
+function disconnect() { if (!confirm('¿Quitar el token de este navegador? (la llave de firma queda guardada)')) return; localStorage.removeItem(TK); location.reload(); }
 
+/* ---------- llave de firma ---------- */
+function keyCard() {
+  const local = privJwk(), ok = local && sameKey(pubOf(local), REMOTE_PUB);
+  if (ok) return `<div class="card p-4 flex flex-wrap items-center gap-3 text-sm"><i class="fas fa-shield-halved text-green-600"></i><span class="flex-1">Licencia firmada: nadie puede habilitar el sistema sin esta llave.</span><button class="btn b-l" onclick="downloadKey()"><i class="fas fa-download"></i> Respaldar llave</button></div>`;
+  return `<div class="card p-5 border-amber-300 bg-amber-50">
+    <p class="font-bold"><i class="fas fa-key text-amber-600 mr-1"></i>${REMOTE_PUB ? 'Este navegador no tiene la llave de firma' : 'Falta crear la llave de firma'}</p>
+    <p class="text-sm text-slate-600 mt-1">${REMOTE_PUB ? 'Importá el archivo de respaldo de la llave para poder publicar cambios.' : 'Con la llave, el sistema de Diego solo acepta licencias publicadas desde este panel: si alguien modifica el archivo o los datos del navegador, se bloquea.'}</p>
+    <div class="flex flex-wrap gap-2 mt-3">${REMOTE_PUB ? `<label class="btn b-d cursor-pointer"><i class="fas fa-upload"></i> Importar llave<input type="file" class="hidden" accept=".json" onchange="importKey(this)"></label>` : ''}<button class="btn ${REMOTE_PUB ? 'b-l' : 'b-d'}" onclick="createKey()"><i class="fas fa-wand-magic-sparkles"></i> ${REMOTE_PUB ? 'Crear una llave nueva' : 'Crear llave y activar'}</button></div></div>`;
+}
+async function createKey() {
+  if (REMOTE_PUB && !confirm('Se reemplaza la llave anterior. Los códigos de recuperación ya emitidos dejan de valer. ¿Seguir?')) return;
+  try {
+    const kp = await crypto.subtle.generateKey({name: 'ECDSA', namedCurve: 'P-256'}, true, ['sign', 'verify']);
+    const priv = await crypto.subtle.exportKey('jwk', kp.privateKey), pub = pubOf(await crypto.subtle.exportKey('jwk', kp.publicKey));
+    localStorage.setItem(KK, JSON.stringify(priv)); downloadKey();
+    const k = await getFile(KEYFILE);
+    await putFile(KEYFILE, `/* Clave pública de la licencia (la privada la tiene solo el dueño del sistema). */\nwindow.POHL_LIC_PUB = ${JSON.stringify(pub)};\n`, 'Licencia: clave pública de firma', k && k.sha);
+    REMOTE_PUB = pub;
+    await publish('Abono: licencia firmada');
+    show(); toast('Llave creada y licencia firmada. Guardá el archivo descargado en un lugar seguro.', 6000);
+  } catch (e) { toast(e.message, 6000); }
+}
+function downloadKey() { const k = localStorage.getItem(KK); if (k) dl('pohl-llave-privada-NO-COMPARTIR.json', k, 'application/json'); }
+function importKey(inp) {
+  const f = inp.files[0]; if (!f) return;
+  f.text().then(t => { try { const j = JSON.parse(t); if (!j.d || !sameKey(pubOf(j), REMOTE_PUB)) throw 0; localStorage.setItem(KK, JSON.stringify(j)); show(); toast('Llave importada'); } catch (e) { toast('Ese archivo no es la llave de este sistema'); } });
+}
+
+/* ---------- vista ---------- */
 function state() {
   if (LIC.estado === 'suspendido') return ['Suspendido', 'bg-red-100 text-red-700', 'Bloqueado manualmente'];
   if (!LIC.vence) return ['Sin vencimiento', 'bg-slate-100 text-slate-600', ''];
   const d = Math.floor((new Date(LIC.vence + 'T23:59:59') - Date.now()) / 864e5);
-  if (d >= 0) return d <= num(LIC.avisoDias) ? ['Vence pronto', 'bg-amber-100 text-amber-700', 'Faltan ' + d + ' día(s); Diego ya ve el aviso'] : ['Al día', 'bg-green-100 text-green-700', 'Faltan ' + d + ' días'];
+  if (d >= 0) return d <= num(LIC.avisoDias) ? ['Vence pronto', 'bg-amber-100 text-amber-700', (d ? 'Faltan ' + d + ' día(s)' : 'Vence hoy') + '; Diego ya ve el aviso'] : ['Al día', 'bg-green-100 text-green-700', 'Faltan ' + d + ' días'];
   const resta = num(LIC.gracia) + d;
   return resta >= 0 ? ['Vencido (en gracia)', 'bg-orange-100 text-orange-700', 'Se bloquea en ' + resta + ' día(s)'] : ['Bloqueado por falta de pago', 'bg-red-100 text-red-700', 'Vencido hace ' + (-d) + ' días'];
 }
+const neto = m => Math.round(num(m) * (1 - tasa() / 100) * 100) / 100;
+function calcNeto() {
+  const m = num($('#c-monto').value), t = num($('#c-tasa').value);
+  $('#neto-box').innerHTML = m ? `Diego paga <b>${money(m)}</b> · Mercado Pago descuenta <b>${money(Math.round(m * t) / 100)}</b> (${String(t).replace('.', ',')}%) · <b>Te llegan ${money(Math.round(m * (100 - t)) / 100)}</b>` : 'Cargá el precio del abono para ver cuánto te queda.';
+}
+function fromNeto() { const q = num($('#c-quiero').value), t = num($('#c-tasa').value); if (!q) return toast('Escribí cuánto querés recibir'); $('#c-monto').value = Math.ceil(q / (1 - t / 100) / 10) * 10; calcNeto(); toast('Precio calculado. Guardá y publicá.'); }
 function show() {
   $('#v-login').classList.add('hidden'); $('#v-panel').classList.remove('hidden'); $('#btn-out').classList.remove('hidden');
   $('#repo-name').textContent = repo();
-  const st = state(), h = hist(), year = new Date().getFullYear();
-  const tot = h.filter(p => p.fecha.startsWith(year)).reduce((a, p) => a + num(p.monto), 0);
+  $('#key-card').innerHTML = keyCard();
+  const st = state(), h = hist(), year = String(new Date().getFullYear());
+  const tot = h.filter(p => p.fecha.startsWith(year)).reduce((a, p) => a + num(p.monto), 0), totNeto = h.filter(p => p.fecha.startsWith(year)).reduce((a, p) => a + num(p.neto ?? neto(p.monto)), 0);
   $('#stats').innerHTML = [
     ['Estado', `<span class="pill ${st[1]}">${st[0]}</span><p class="text-xs text-slate-500 mt-1">${st[2]}</p>`],
-    ['Abono mensual', `<p class="text-2xl font-extrabold">${num(LIC.monto) ? money(LIC.monto) : '—'}</p>`],
-    ['Próximo vencimiento', `<p class="text-2xl font-extrabold">${fd(LIC.vence)}</p>`],
-    ['Cobrado en ' + year, `<p class="text-2xl font-extrabold text-green-600">${money(tot)}</p>`]
-  ].map(([l, v]) => `<div class="card p-4"><p class="lbl mb-2">${l}</p>${v}</div>`).join('');
+    ['Abono mensual', `<p class="text-xl sm:text-2xl font-extrabold">${num(LIC.monto) ? money(LIC.monto) : '—'}</p>${num(LIC.monto) ? `<p class="text-xs text-slate-500">Te llegan ${money(neto(LIC.monto))}</p>` : ''}`],
+    ['Próximo vencimiento', `<p class="text-xl sm:text-2xl font-extrabold">${fd(LIC.vence)}</p>`],
+    ['Cobrado en ' + year, `<p class="text-xl sm:text-2xl font-extrabold text-green-600">${money(tot)}</p><p class="text-xs text-slate-500">Neto ${money(totNeto)}</p>`]
+  ].map(([l, v]) => `<div class="card p-4 min-w-0"><p class="lbl mb-2">${l}</p>${v}</div>`).join('');
   const set = (id, v) => $(id).value = v ?? '';
-  set('#c-cliente', LIC.cliente); set('#c-plan', LIC.plan); set('#c-monto', LIC.monto || ''); set('#c-vence', LIC.vence); set('#c-aviso', LIC.avisoDias ?? 5); set('#c-gracia', LIC.gracia ?? 5);
+  set('#c-cliente', LIC.cliente); set('#c-plan', LIC.plan); set('#c-monto', LIC.monto || ''); set('#c-tasa', tasa()); set('#c-vence', LIC.vence); set('#c-aviso', LIC.avisoDias ?? 5); set('#c-gracia', LIC.gracia ?? 0);
   set('#c-link', LIC.linkPago); set('#c-alias', LIC.alias); set('#c-wa', LIC.whatsappDueno); set('#c-tel', LIC.telefonoCliente); set('#c-estado', LIC.estado || 'activo'); set('#c-msg', LIC.mensaje);
+  calcNeto();
   if (!$('#p-fecha').value) $('#p-fecha').value = ymd(new Date());
   $('#p-monto').value = LIC.monto || '';
+  if (!LIC.linkPago) $('#mp-help').open = true;
   $('#btn-susp').innerHTML = LIC.estado === 'suspendido' ? '<i class="fas fa-unlock"></i> Reactivar el sistema' : '<i class="fas fa-lock"></i> Suspender ahora';
   $('#btn-susp').className = 'btn w-full ' + (LIC.estado === 'suspendido' ? 'b-g' : 'b-r');
-  $('#hist').innerHTML = h.length ? h.slice().reverse().map(p => `<div class="flex justify-between py-2 border-b last:border-0"><div><p class="font-semibold">${fd(p.fecha)} · ${esc(p.medio)}</p><p class="text-xs text-slate-400">${esc(p.periodo)}${p.ref ? ' · op. ' + esc(p.ref) : ''}</p></div><b>${money(p.monto)}</b></div>`).join('') : '<p class="text-slate-400">Todavía no registraste pagos.</p>';
+  $('#hist').innerHTML = h.length ? h.slice().reverse().map(p => `<div class="flex justify-between gap-2 py-2 border-b last:border-0"><div class="min-w-0"><p class="font-semibold">${fd(p.fecha)} · ${esc(p.medio)}</p><p class="text-xs text-slate-400 truncate">${esc(p.periodo)}${p.ref ? ' · op. ' + esc(p.ref) : ''}</p></div><div class="text-right"><b>${money(p.monto)}</b><p class="text-[11px] text-slate-400">neto ${money(p.neto ?? neto(p.monto))}</p></div></div>`).join('') : '<p class="text-slate-400">Todavía no registraste pagos.</p>';
 }
 function addMonths(s, n, day) {
   const b = s ? new Date(s + 'T12:00') : new Date();
@@ -176,45 +294,60 @@ function addMonths(s, n, day) {
   const last = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
   t.setDate(Math.min(day || b.getDate(), last)); return ymd(t);
 }
+const okLink = u => !u || /^https:\/\/([a-z0-9-]+\.)*(mercadopago\.com\.ar|mercadopago\.com|mpago\.la|mpago\.li)\//i.test(u);
 function readForm() {
+  localStorage.setItem(TASA, num($('#c-tasa').value));
   Object.assign(LIC, {cliente: $('#c-cliente').value.trim(), plan: $('#c-plan').value.trim(), monto: num($('#c-monto').value), vence: $('#c-vence').value, avisoDias: num($('#c-aviso').value), gracia: num($('#c-gracia').value),
     linkPago: $('#c-link').value.trim(), alias: $('#c-alias').value.trim(), whatsappDueno: $('#c-wa').value.trim(), telefonoCliente: $('#c-tel').value.trim(), estado: $('#c-estado').value, mensaje: $('#c-msg').value.trim()});
   if (LIC.vence) LIC.diaVencimiento = new Date(LIC.vence + 'T12:00').getDate();
 }
-async function run(btn, fn, okMsg) { try { await fn(); show(); toast(okMsg); } catch (e) { toast(e.message, 6000); show(); } }
+async function run(fn, okMsg) { try { await fn(); show(); toast(okMsg); } catch (e) { toast(e.message, 6000); show(); } }
+function needKey() { const l = privJwk(); if (!l || !sameKey(pubOf(l), REMOTE_PUB)) { toast('Primero creá o importá la llave de firma (arriba)'); return true; } return false; }
 function saveConfig() {
-  if ($('#c-link').value && !/^https:\/\/(www\.)?(mpago\.la|mpago\.li|link\.mercadopago\.com\.ar|(www\.)?mercadopago\.com\.ar)\//.test($('#c-link').value.trim()) && !confirm('El link no parece de Mercado Pago. ¿Guardar igual?')) return;
-  readForm(); run(null, () => publish('Abono: configuración actualizada'), 'Publicado ✔');
+  if (needKey()) return;
+  if (!okLink($('#c-link').value.trim())) return toast('El link tiene que ser de Mercado Pago (https://…mercadopago.com.ar o mpago.la)');
+  readForm(); run(() => publish('Abono: configuración actualizada'), 'Publicado ✔');
 }
 function registerPay() {
+  if (needKey()) return;
   const fecha = $('#p-fecha').value, monto = num($('#p-monto').value), meses = Math.max(1, parseInt($('#p-meses').value) || 1);
   if (!fecha || !monto) return toast('Completá fecha y monto');
   readForm();
-  const desde = LIC.vence || ymd(new Date());
-  const nuevo = addMonths(desde, meses, LIC.diaVencimiento);
+  const today = ymd(new Date()), desde = LIC.vence && LIC.vence >= today ? LIC.vence : today;   // si estaba vencido, el mes corre desde hoy
+  const nuevo = addMonths(desde, meses, LIC.vence && LIC.vence >= today ? LIC.diaVencimiento : null);
   const periodo = `${fd(desde)} → ${fd(nuevo)}`;
   if (!confirm(`Registrar ${money(monto)} y pasar el vencimiento al ${fd(nuevo)}?`)) return;
-  LIC.vence = nuevo; LIC.estado = 'activo'; LIC.ultimoPago = {fecha, periodo};
-  run(null, async () => {
-    await publish('Abono: pago registrado ' + fecha);
-    const h = hist(); h.push({fecha, monto, medio: $('#p-medio').value, meses, periodo, ref: $('#p-ref').value.trim(), ts: Date.now()}); localStorage.setItem(HK, JSON.stringify(h));
+  const prev = JSON.stringify(LIC);
+  LIC.vence = nuevo; LIC.diaVencimiento = new Date(nuevo + 'T12:00').getDate(); LIC.estado = 'activo'; LIC.ultimoPago = {fecha, periodo};
+  run(async () => {
+    try { await publish('Abono: pago registrado ' + fecha); } catch (e) { LIC = JSON.parse(prev); throw e; }
+    const h = hist(); h.push({fecha, monto, neto: $('#p-medio').value === 'Mercado Pago' ? neto(monto) : monto, medio: $('#p-medio').value, meses, periodo, ref: $('#p-ref').value.trim(), ts: Date.now()}); localStorage.setItem(HK, JSON.stringify(h));
     $('#p-ref').value = ''; $('#p-meses').value = 1;
   }, 'Pago registrado. Vence el ' + fd(nuevo));
 }
 function toggleSusp() {
+  if (needKey()) return;
   const s = LIC.estado === 'suspendido';
   if (!confirm(s ? '¿Reactivar el sistema de Diego?' : '¿Suspender el sistema de Diego ahora? Sus datos no se borran; solo no podrá usarlo hasta que lo reactives.')) return;
-  LIC.estado = s ? 'activo' : 'suspendido'; run(null, () => publish(s ? 'Abono: sistema reactivado' : 'Abono: sistema suspendido'), s ? 'Sistema reactivado' : 'Sistema suspendido');
+  LIC.estado = s ? 'activo' : 'suspendido'; run(() => publish(s ? 'Abono: sistema reactivado' : 'Abono: sistema suspendido'), s ? 'Sistema reactivado' : 'Sistema suspendido');
 }
 function waNum(p) { let d = String(p || '').replace(/\D/g, ''); if (!d) return ''; if (d.startsWith('54')) return d; return '549' + d.replace(/^0/, '').replace(/^(\d{2,4})15(\d{6,8})$/, '$1$2'); }
+function openWA(tel, t) { window.open('https://wa.me/' + waNum(tel) + '?text=' + encodeURIComponent(t), '_blank', 'noopener'); }
 function sendReminder() {
   if (!LIC.linkPago) return toast('Primero cargá el link de pago de Mercado Pago');
-  const t = `Hola Diego! Te paso el link para abonar el sistema del taller${num(LIC.monto) ? ' (' + money(LIC.monto) + ')' : ''}, que vence el ${fd(LIC.vence)}:\n${LIC.linkPago}${LIC.alias ? '\nO por transferencia al alias ' + LIC.alias : ''}\n¡Gracias!`;
-  window.open('https://wa.me/' + waNum(LIC.telefonoCliente) + '?text=' + encodeURIComponent(t), '_blank');
+  openWA(LIC.telefonoCliente, `Hola Diego! Te paso el link para abonar el sistema del taller${num(LIC.monto) ? ' (' + money(LIC.monto) + ')' : ''}, que vence el ${fd(LIC.vence)}:\n${LIC.linkPago}${LIC.alias ? '\nO por transferencia al alias ' + LIC.alias : ''}\n¡Gracias!`);
 }
+function openLink() { const u = $('#c-link').value.trim(); if (!u) return; if (!okLink(u)) return toast('No es un link de Mercado Pago'); window.open(u, '_blank', 'noopener'); }
 function copyLink() { if (!LIC.linkPago) return toast('No hay link cargado'); navigator.clipboard.writeText(LIC.linkPago).then(() => toast('Link copiado')); }
-function dl(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); }
-function exportCSV() { dl('abonos_pohl.csv', 'fecha;monto;medio;meses;periodo;operacion\n' + hist().map(p => [p.fecha, p.monto, p.medio, p.meses, p.periodo, p.ref || ''].join(';')).join('\n'), 'text/csv'); }
+async function makeReset() {
+  if (needKey()) return;
+  const n = $('#r-pedido').value.trim().toUpperCase(); if (!/^[0-9A-F]{8}$/.test(n)) return toast('El número de pedido tiene 8 caracteres (0-9 y A-F)');
+  try { const code = await sign({id: LIC_ID, t: 'reset', n, exp: Date.now() + 24 * 3600e3}); $('#r-code').value = code; $('#r-code').classList.remove('hidden'); $('#r-send').classList.remove('hidden'); $('#r-code').select(); try { await navigator.clipboard.writeText(code); toast('Código copiado'); } catch (e) {} }
+  catch (e) { toast(e.message); }
+}
+function sendReset() { openWA(LIC.telefonoCliente, 'Código para recuperar la contraseña del sistema (vale 24 h):\n' + $('#r-code').value); }
+function dl(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+function exportCSV() { dl('abonos_pohl.csv', 'fecha;monto;neto;medio;meses;periodo;operacion\n' + hist().map(p => [p.fecha, p.monto, p.neto ?? neto(p.monto), p.medio, p.meses, p.periodo, p.ref || ''].join(';')).join('\n'), 'text/csv'); }
 function exportHist() { dl('abonos_pohl_respaldo.json', JSON.stringify(hist()), 'application/json'); }
 function importHist(inp) { const f = inp.files[0]; if (!f) return; f.text().then(t => { try { const a = JSON.parse(t); if (!Array.isArray(a)) throw 0; const h = hist(); a.forEach(p => { if (!h.some(x => x.ts === p.ts)) h.push(p); }); h.sort((x, y) => x.fecha.localeCompare(y.fecha)); localStorage.setItem(HK, JSON.stringify(h)); show(); toast('Historial importado'); } catch (e) { toast('Archivo inválido'); } }); }
 

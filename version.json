@@ -1,8 +1,9 @@
 {
-  "version": "2.1.0",
+  "version": "2.2.0",
   "fecha": "2026-11-24",
   "notas": [
-    "Abono mensual del sistema con pago por Mercado Pago.",
+    "Contraseñas protegidas y recuperación con código.",
+    "Mejor uso en celulares e iPhone.",
     "Tus datos se conservan."
   ]
 }

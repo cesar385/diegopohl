@@ -2,38 +2,52 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>POHL Chapa y Pintura — Gestión del Taller</title>
 <meta name="theme-color" content="#cc0000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="POHL Taller">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="img-removebg-preview.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="format-detection" content="telephone=no">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>
-if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif'],mono:['JetBrains Mono','ui-monospace','monospace']},colors:{brand:{50:'#fff1f1',100:'#ffdfdf',500:'#e11d1d',600:'#cc0000',700:'#a30000',900:'#4d0000'}}}}};
-</script>
+<link rel="stylesheet" href="vendor/app.css">
+<link rel="stylesheet" href="vendor/fa/css/fontawesome.min.css">
+<link rel="stylesheet" href="vendor/fa/css/solid.min.css">
+<link rel="stylesheet" href="vendor/fa/css/brands.min.css">
+<script src="vendor/html2pdf.bundle.min.js" defer></script>
+<script src="vendor/qrcode.min.js" defer></script>
+<script src="licencia-clave.js"></script>
 <style>
-  html,body{height:100%;} .hidden{display:none;}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+  html,body{min-height:100%;} .hidden{display:none !important;}
+  body{overscroll-behavior-y:none;}
+  button,a,label,select,input{touch-action:manipulation;}
+  :root{--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px);}
+  .safe-t{padding-top:var(--st);} .safe-x{padding-left:max(16px,var(--sl));padding-right:max(16px,var(--sr));}
+  .pb-tabs{padding-bottom:calc(112px + var(--sb));} @media(min-width:1024px){.pb-tabs{padding-bottom:40px;}}
+  .top-tabs{bottom:calc(76px + var(--sb));} @media(min-width:1024px){.top-tabs{bottom:16px;}}
+  img,canvas{max-width:100%;}
+  input[type=date]{min-height:44px;-webkit-appearance:none;appearance:none;}
+  .doc-scale{transform-origin:top left;}
   body{font-family:Inter,system-ui,sans-serif;background:#f6f7f9;color:#0f172a;-webkit-tap-highlight-color:transparent;}
   .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#cc0000;font-weight:700;}
   .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#64748b;font-weight:700;}
   .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;}
-  .inp{width:100%;background:#fff;border:1px solid #d9dde3;border-radius:10px;padding:10px 12px;font-size:15px;outline:none;transition:border .15s,box-shadow .15s;}
+  .inp{width:100%;min-width:0;background:#fff;border:1px solid #d9dde3;border-radius:10px;padding:10px 12px;font-size:16px;line-height:1.3;outline:none;transition:border .15s,box-shadow .15s;}
   .inp:focus{border-color:#cc0000;box-shadow:0 0 0 3px rgba(204,0,0,.12);}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:10px 16px;font-weight:700;font-size:14px;transition:transform .05s,background .15s;white-space:nowrap;}
+  .btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:10px 16px;font-weight:700;font-size:14px;transition:transform .05s,background .15s;white-space:nowrap;}
   .btn:active{transform:scale(.98);}
   .btn-p{background:#cc0000;color:#fff;} .btn-p:hover{background:#a30000;}
   .btn-d{background:#0f172a;color:#fff;} .btn-d:hover{background:#1e293b;}
   .btn-l{background:#fff;border:1px solid #d9dde3;color:#0f172a;} .btn-l:hover{background:#f1f5f9;}
   .btn-g{background:#16a34a;color:#fff;} .btn-g:hover{background:#15803d;}
-  .btn-sm{padding:6px 10px;font-size:12px;border-radius:8px;}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:8px;min-height:36px;}
   .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;}
   .pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;}
   .nav-a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#475569;font-weight:600;font-size:14px;}
@@ -43,9 +57,9 @@ if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sy
   .tab-a.on{color:#cc0000;}
   .chip{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #e2e8f0;background:#fff;color:#475569;white-space:nowrap;}
   .chip.on{background:#0f172a;border-color:#0f172a;color:#fff;}
-  .modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:60;display:flex;align-items:flex-end;justify-content:center;}
+  .modal-bg{position:fixed;inset:0;padding-top:var(--st);background:rgba(15,23,42,.55);z-index:60;display:flex;align-items:flex-end;justify-content:center;}
   @media(min-width:640px){.modal-bg{align-items:center;padding:24px;}}
-  .modal-box{background:#fff;width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;}
+  .modal-box{background:#fff;width:100%;max-width:640px;max-height:92vh;max-height:calc(100dvh - var(--st) - 12px);overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;border-radius:20px 20px 0 0;padding-bottom:var(--sb);}
   @media(min-width:640px){.modal-box{border-radius:20px;}}
   .step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
   .scroll-x{overflow-x:auto;scrollbar-width:none;} .scroll-x::-webkit-scrollbar{display:none;}
@@ -55,8 +69,8 @@ if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sy
   .doc th{background:#f3f4f6;font-weight:900;}
   .rot-word{display:inline-block;animation:rot .5s ease;}
   @keyframes rot{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-  #toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:90;display:none;}
-  .safe-b{padding-bottom:env(safe-area-inset-bottom);}
+  #toast{position:fixed;left:50%;bottom:calc(96px + var(--sb));max-width:calc(100vw - 32px);text-align:center;transform:translateX(-50%);z-index:90;display:none;}
+  .safe-b{padding-bottom:var(--sb);padding-left:var(--sl);padding-right:var(--sr);}
   canvas.sig{touch-action:none;background:#fff;border:1px dashed #94a3b8;border-radius:12px;width:100%;height:180px;}
   .bar{background:#cc0000;border-radius:6px 6px 0 0;min-height:3px;}
 </style>
@@ -64,7 +78,7 @@ if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sy
 <body>
 
 <!-- Aviso de actualización (versiones nuevas) -->
-<div id="update-bar" class="hidden fixed top-0 inset-x-0 z-[80] bg-slate-900 text-white">
+<div id="update-bar" class="hidden fixed top-0 inset-x-0 z-[80] bg-slate-900 text-white safe-t">
   <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3 text-sm">
     <i class="fas fa-rotate text-brand-500"></i>
     <div class="flex-1 min-w-[200px]"><b>Hay una actualización del sistema</b> <span id="update-ver" class="font-mono text-xs opacity-70"></span><br><span class="opacity-80 text-xs">Tus órdenes, clientes y caja se conservan. Se guarda una copia de seguridad antes de actualizar.</span></div>
@@ -74,7 +88,7 @@ if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sy
 </div>
 
 <!-- LOGIN / PORTADA -->
-<section id="login" class="hidden min-h-screen bg-white">
+<section id="login" class="hidden min-h-[100dvh] bg-white safe-t">
   <header class="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <img src="img-removebg-preview.png" alt="POHL" class="h-10 w-auto" onerror="this.style.display='none'">
@@ -98,10 +112,11 @@ if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sy
       <p class="lbl mb-1">Iniciar sesión</p>
       <h2 class="text-2xl font-extrabold mb-6">Entrá a tu taller</h2>
       <form onsubmit="event.preventDefault();doLogin()" class="space-y-3">
-        <input id="l-user" class="inp" placeholder="Usuario" autocomplete="username">
+        <input id="l-user" class="inp" placeholder="Usuario" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text">
         <input id="l-pass" class="inp" type="password" placeholder="Contraseña" autocomplete="current-password">
         <button class="btn btn-p w-full py-3 text-base">Entrar <i class="fas fa-arrow-right"></i></button>
       </form>
+      <button onclick="forgotPass()" class="text-xs text-slate-500 underline mt-3">¿Olvidaste la contraseña?</button>
       <p class="text-xs text-slate-400 mt-5"><i class="fas fa-lock mr-1"></i>Los datos se guardan en este dispositivo. Hacé copias de seguridad desde Configuración.</p>
     </div>
   </div>
@@ -129,11 +144,11 @@ if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sy
       <p class="text-[10px] text-slate-300 mt-2 font-mono" id="ver-side"></p>
     </div>
   </aside>
-  <header class="lg:hidden sticky top-0 z-30 bg-black text-white px-4 py-2 flex items-center justify-between">
+  <header class="lg:hidden sticky top-0 z-30 bg-black text-white safe-t"><div class="safe-x py-2 flex items-center justify-between">
     <img src="img-removebg-preview.png" class="h-9 w-auto" alt="POHL" onerror="this.outerHTML='<b>POHL</b>'">
     <span class="lbl !text-white/60" id="top-title"></span>
-  </header>
-  <main id="main" class="lg:ml-64 px-4 sm:px-6 lg:px-10 py-5 pb-32 lg:pb-10 max-w-6xl"></main>
+  </div></header>
+  <main id="main" class="lg:ml-64 safe-x sm:px-6 lg:px-10 py-5 pb-tabs max-w-6xl"></main>
   <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t z-40 flex items-end safe-b" id="tab-nav"></nav>
 </section>
 
@@ -151,7 +166,7 @@ if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sy
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 const SCHEMA = 1;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -226,8 +241,34 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(DB)); return true; }
   catch (e) { toast('⚠️ No se pudo guardar: memoria llena. Descargá una copia de seguridad.', 6000); return false; }
 }
+/* Contraseñas: PBKDF2-SHA256 con sal aleatoria por usuario (210.000 vueltas).
+   En el código no hay ninguna contraseña escrita: la cuenta inicial trae solo su huella,
+   y en el primer ingreso obliga a elegir una contraseña nueva. */
+const PBKDF_IT = 210000;
+const DEFAULT_PWD = {salt: 'U1Sgx9agcw/6dQEyjUFXwg==', it: 210000, hash: 'JiWx1WDW5FqZPOZm9CT1dVjdN36fvMktrZu9C4/9KDM='};
+const toB64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const fromB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function pbkdf(pass, salt, it) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
+  return toB64(await crypto.subtle.deriveBits({name: 'PBKDF2', hash: 'SHA-256', salt: fromB64(salt), iterations: it}, key, 256));
+}
+async function makePwd(pass) { const salt = toB64(crypto.getRandomValues(new Uint8Array(16))); return {salt, it: PBKDF_IT, hash: await pbkdf(pass, salt, PBKDF_IT)}; }
+function sameStr(a, b) { if (a.length !== b.length) return false; let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0; }
+async function checkPwd(u, pass) {
+  if (u.pwd) return sameStr(await pbkdf(pass, u.pwd.salt, u.pwd.it), u.pwd.hash);
+  if (u.pass && sameStr(await sha(pass), u.pass)) { u.pwd = await makePwd(pass); delete u.pass; save(); return true; } // versión 2.0: se mejora al entrar
+  return false;
+}
+async function isDefaultPwd(pass) { return sameStr(await pbkdf(pass, DEFAULT_PWD.salt, DEFAULT_PWD.it), DEFAULT_PWD.hash); }
+function pwdProblem(p, user) {
+  if (p.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
+  if (!/[a-zA-ZñÑ]/.test(p) || !/\d/.test(p)) return 'Usá letras y números';
+  if (user && p.toLowerCase().includes(String(user).toLowerCase())) return 'No puede contener el usuario';
+  return '';
+}
 async function ensureAdmin() {
-  if (!DB.users.length) DB.users.push({id: 'u_admin', user: '195599', pass: await sha('Diego2026'), name: 'Diego Pohl', role: 'admin', comision: 0});
+  if (!DB.users.length) DB.users.push({id: 'u_admin', user: '195599', pwd: {...DEFAULT_PWD}, mustChange: true, name: 'Diego Pohl', role: 'admin', comision: 0});
+  DB.users.forEach(u => { if (u.pwd && u.pwd.hash === DEFAULT_PWD.hash) u.mustChange = true; });
 }
 function readLegacy() { try { const l = JSON.parse(localStorage.getItem(LEGACY_KEY)); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
 
@@ -294,8 +335,9 @@ function start() {
   const seen = localStorage.getItem(SEEN_KEY);
   localStorage.setItem(SEEN_KEY, APP_VERSION);
   if (seen && seen !== APP_VERSION) setTimeout(() => toast('✅ Sistema actualizado a la versión ' + APP_VERSION + '. Tus datos están intactos.', 5000), 600);
-  const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
-  ME = s && DB.users.find(u => u.id === s.id) || null;
+  let s = null; try { s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) {}
+  ME = s && s.exp > Date.now() && DB.users.find(u => u.id === s.id) || null;
+  if (ME && ME.mustChange) ME = null;
   ME ? showApp() : showLogin();
 }
 
@@ -360,15 +402,67 @@ function registerSW() {
 
 /* ---------- sesión ---------- */
 function showLogin() { $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); }
+/* Sesión: vence tras 12 h sin uso. Intentos: 5 fallidos bloquean, y el bloqueo se duplica cada vez. */
+const SESSION_MS = 12 * 3600e3, TRIES_KEY = 'pohl_intentos';
+function touchSession() { if (ME) localStorage.setItem(SESSION_KEY, JSON.stringify({id: ME.id, exp: Date.now() + SESSION_MS})); }
+setInterval(() => { if (!ME) return; let s = null; try { s = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) {} if (!s || s.exp < Date.now()) { toast('La sesión se cerró por inactividad'); logout(); } }, 60e3);
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (ME && (!touchSession.t || Date.now() - touchSession.t > 60e3)) { touchSession.t = Date.now(); touchSession(); } }, {passive: true}));
+function tries() { try { return JSON.parse(localStorage.getItem(TRIES_KEY)) || {n: 0, until: 0, lv: 0}; } catch (e) { return {n: 0, until: 0, lv: 0}; } }
 async function doLogin() {
+  const t = tries();
+  if (t.until > Date.now()) return toast('Demasiados intentos. Probá de nuevo en ' + Math.ceil((t.until - Date.now()) / 60e3) + ' min.');
   const u = $('#l-user').value.trim(), p = $('#l-pass').value;
-  const h = await sha(p);
-  const user = DB.users.find(x => x.user === u && x.pass === h);
-  if (!user) return toast('Usuario o contraseña incorrectos');
-  ME = user; localStorage.setItem(SESSION_KEY, JSON.stringify({id: user.id}));
-  $('#l-pass').value = ''; showApp();
+  if (!u || !p) return toast('Completá usuario y contraseña');
+  const btn = document.querySelector('#login form button'); btn.disabled = true;
+  const user = DB.users.find(x => x.user === u);
+  const ok = user ? await checkPwd(user, p) : (await pbkdf(p, DEFAULT_PWD.salt, 1000), false);
+  btn.disabled = false;
+  if (!ok) {
+    t.n++; if (t.n >= 5) { t.lv = (t.lv || 0) + 1; t.until = Date.now() + 5 * 60e3 * Math.pow(2, t.lv - 1); t.n = 0; }
+    localStorage.setItem(TRIES_KEY, JSON.stringify(t));
+    return toast(t.until > Date.now() ? 'Demasiados intentos. Bloqueado por ' + Math.round((t.until - Date.now()) / 60e3) + ' min.' : 'Usuario o contraseña incorrectos');
+  }
+  localStorage.removeItem(TRIES_KEY);
+  $('#l-pass').value = '';
+  if (user.mustChange || await isDefaultPwd(p)) { user.mustChange = true; return forceNewPwd(user); }
+  ME = user; touchSession(); showApp();
 }
-function logout() { localStorage.removeItem(SESSION_KEY); ME = null; location.hash = ''; showLogin(); }
+function forceNewPwd(user, viaReset) {
+  modal(`<div class="p-6 sm:p-8"><div class="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4"><i class="fas fa-key fa-lg"></i></div>
+    <p class="eyebrow">${viaReset ? 'Recuperación' : 'Seguridad'}</p><h2 class="text-xl font-extrabold mt-1">Elegí una contraseña nueva</h2>
+    <p class="text-sm text-slate-500 mt-2">${viaReset ? 'Código válido.' : 'Por seguridad, la contraseña inicial tiene que cambiarse.'} Usuario: <b class="font-mono">${esc(user.user)}</b></p>
+    <div class="space-y-3 mt-5"><input id="np1" class="inp" type="password" autocomplete="new-password" placeholder="Nueva contraseña (mín. 8, letras y números)"><input id="np2" class="inp" type="password" autocomplete="new-password" placeholder="Repetila">
+    <button class="btn btn-p w-full" id="np-ok">Guardar y entrar</button><button class="btn btn-l w-full" onclick="closeModal()">Cancelar</button></div></div>`, {locked: true});
+  $('#np-ok').onclick = async () => {
+    const a = $('#np1').value, b = $('#np2').value, pr = pwdProblem(a, user.user);
+    if (pr) return toast(pr); if (a !== b) return toast('Las contraseñas no coinciden'); if (await isDefaultPwd(a)) return toast('Tiene que ser distinta a la inicial');
+    user.pwd = await makePwd(a); delete user.pass; delete user.mustChange; save();
+    closeModal(); ME = user; touchSession(); showApp(); toast('Contraseña actualizada');
+  };
+}
+/* ¿Olvidaste la contraseña? El dueño del sistema genera un código firmado para este pedido. */
+function forgotPass() {
+  if (!window.POHL_LIC_PUB) return modal(`${mHead('Recuperar contraseña', 'Ayuda')}<div class="p-5 text-sm text-slate-600">Pedile al administrador del sistema que te habilite la recuperación.</div>`);
+  let req = sessionStorage.getItem('pohl_reset_req'); if (!req) { req = Array.from(crypto.getRandomValues(new Uint8Array(4)), b => b.toString(16).padStart(2, '0')).join('').toUpperCase(); sessionStorage.setItem('pohl_reset_req', req); }
+  modal(`${mHead('Recuperar contraseña', 'Ayuda')}<div class="p-5 space-y-3 text-sm">
+    <p>1. Mandale este número de pedido al administrador del sistema:</p>
+    <p class="text-3xl font-extrabold font-mono tracking-widest text-center py-2">${req}</p>
+    ${LIC && LIC.whatsappDueno ? `<button class="btn btn-g w-full" onclick="openWA('${esc(LIC.whatsappDueno)}','Hola! Necesito recuperar la contraseña del sistema del taller. Pedido: ${req}')"><i class="fab fa-whatsapp"></i> Enviar por WhatsApp</button>` : ''}
+    <p>2. Pegá el código que te devuelva:</p>
+    <textarea id="rs-code" class="inp font-mono text-xs" rows="3" placeholder="Código de recuperación"></textarea>
+    <select id="rs-user" class="inp">${DB.users.map(u => `<option value="${u.id}">${esc(u.name)} (${esc(u.user)})</option>`).join('')}</select>
+    <button class="btn btn-p w-full" onclick="useReset()">Continuar</button></div>`);
+}
+async function useReset() {
+  const req = sessionStorage.getItem('pohl_reset_req'); const code = $('#rs-code').value.trim();
+  const d = await verifySigned(code);
+  if (!d || d.t !== 'reset' || d.n !== req || !(d.exp > Date.now())) return toast('Código inválido o vencido');
+  const used = JSON.parse(localStorage.getItem('pohl_reset_usados') || '[]'); if (used.includes(d.n)) return toast('Ese código ya se usó');
+  used.push(d.n); localStorage.setItem('pohl_reset_usados', JSON.stringify(used.slice(-50))); sessionStorage.removeItem('pohl_reset_req');
+  localStorage.removeItem(TRIES_KEY);
+  forceNewPwd(DB.users.find(u => u.id === $('#rs-user').value), true);
+}
+function logout() { localStorage.removeItem(SESSION_KEY); ME = null; closeModal(); location.hash = ''; showLogin(); }
 function rotWords() {
   const w = ['auto', 'camioneta', 'moto', 'utilitario', 'paragolpe', 'vehículo']; let i = 0;
   setInterval(() => { const el = $('#rot'); if (!el || $('#login').classList.contains('hidden')) return; i = (i + 1) % w.length; el.textContent = w[i]; el.classList.remove('rot-word'); void el.offsetWidth; el.classList.add('rot-word'); }, 2200);
@@ -641,7 +735,7 @@ function vNueva(mode) {
       <div class="flex justify-between items-center mt-5"><p class="lbl">Firma del cliente</p><button class="btn btn-l btn-sm" onclick="signPad(setNewSig)"><i class="fas fa-signature"></i> Firmar</button></div>
       <div id="n-sig" class="mt-2 text-sm text-slate-400">Sin firma</div>
     </div>
-    <div class="flex gap-2 justify-end sticky bottom-20 lg:bottom-4">
+    <div class="flex gap-2 justify-end sticky top-tabs">
       <a href="#/ordenes" class="btn btn-l">Cancelar</a>
       <button class="btn btn-p px-6 shadow-lg" onclick="createOrder()"><i class="fas fa-check"></i> Crear orden</button>
     </div>
@@ -1210,7 +1304,7 @@ function userModal(id) {
   const u = id ? DB.users.find(x => x.id === id) : {name: '', user: '', role: 'tecnico', comision: 0};
   modal(`${mHead(id ? 'Editar usuario' : 'Nuevo empleado', 'Usuarios')}<div class="p-5 space-y-3">
     <input id="u-name" class="inp" placeholder="Nombre" value="${esc(u.name)}"><input id="u-user" class="inp" placeholder="Usuario para entrar" value="${esc(u.user)}">
-    <input id="u-pass" class="inp" type="password" placeholder="${id ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña'}">
+    <input id="u-pass" class="inp" type="password" autocomplete="new-password" placeholder="${id ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña (mín. 8, letras y números)'}">
     <div class="grid grid-cols-2 gap-3"><select id="u-role" class="inp" ${id === ME.id ? 'disabled' : ''}><option value="tecnico" ${u.role === 'tecnico' ? 'selected' : ''}>Técnico</option><option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrador</option></select>
     <div><input id="u-com" class="inp" type="number" step="any" value="${num(u.comision)}" placeholder="% comisión"><p class="text-[10px] text-slate-400 mt-1">% sobre la mano de obra</p></div></div>
     <div class="flex gap-2">${id && id !== ME.id ? `<button class="btn btn-l text-red-600" onclick="delUser('${id}')"><i class="fas fa-trash"></i></button>` : ''}<button class="btn btn-p flex-1" onclick="saveUser('${id || ''}')">Guardar</button></div></div>`);
@@ -1218,9 +1312,10 @@ function userModal(id) {
 async function saveUser(id) {
   const d = {name: $('#u-name').value.trim(), user: $('#u-user').value.trim(), role: $('#u-role').value, comision: num($('#u-com').value)}; const p = $('#u-pass').value;
   if (!d.name || !d.user) return toast('Completá nombre y usuario');
+  if (p) { const pr = pwdProblem(p, d.user); if (pr) return toast(pr); }
   if (DB.users.some(x => x.user === d.user && x.id !== id)) return toast('Ese usuario ya existe');
-  if (id) { const u = DB.users.find(x => x.id === id); if (id === ME.id) d.role = u.role; Object.assign(u, d); if (p) u.pass = await sha(p); }
-  else { if (!p) return toast('Falta la contraseña'); DB.users.push({id: uid(), ...d, pass: await sha(p)}); }
+  if (id) { const u = DB.users.find(x => x.id === id); if (id === ME.id) d.role = u.role; Object.assign(u, d); if (p) { u.pwd = await makePwd(p); delete u.pass; delete u.mustChange; } }
+  else { if (!p) return toast('Falta la contraseña'); DB.users.push({id: uid(), ...d, pwd: await makePwd(p)}); }
   save(); closeModal(); render(); toast('Usuario guardado');
 }
 async function delUser(id) { if (!await ask('¿Eliminar el usuario?', 'Eliminar', true)) return; DB.users = DB.users.filter(u => u.id !== id); save(); render(); }
@@ -1258,23 +1353,55 @@ async function restorePrev() {
    en el repositorio. Acá solo se lee. Nunca se borran datos por falta de pago:
    si está vencido se bloquea el uso, pero se puede pagar y descargar la copia.
    ===================================================================== */
-const LIC_CACHE = 'pohl_licencia';
-let LIC = null;
+const LIC_CACHE = 'pohl_licencia2', LIC_SEEN = 'pohl_reloj', LIC_MAX_OFFLINE = 72 * 3600e3;
+let LIC = null, LIC_STATUS = 'ok';
+/* La licencia viene firmada por el panel del dueño (ECDSA P-256). La clave pública está en
+   licencia-clave.js. Una licencia modificada a mano, o sin firma válida, no se acepta. */
+const b64uDec = s => { s = String(s).replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return fromB64(s); };
+async function verifySigned(token) {
+  try {
+    if (!window.POHL_LIC_PUB) return null;
+    const [body, sig] = String(token).trim().split('.');
+    const key = await crypto.subtle.importKey('jwk', window.POHL_LIC_PUB, {name: 'ECDSA', namedCurve: 'P-256'}, false, ['verify']);
+    const txt = new TextDecoder().decode(b64uDec(body));
+    const ok = await crypto.subtle.verify({name: 'ECDSA', hash: 'SHA-256'}, key, b64uDec(sig), new TextEncoder().encode(txt));
+    return ok ? JSON.parse(txt) : null;
+  } catch (e) { return null; }
+}
+async function readLicense(raw) {
+  if (!raw) return null;
+  if (raw.token) { const d = await verifySigned(raw.token); return d && d.id === 'diegopohl' ? d : null; }
+  return window.POHL_LIC_PUB ? null : raw;   // sin llave configurada todavía: se acepta sin firma
+}
+function nowSafe() { const seen = num(localStorage.getItem(LIC_SEEN)); const n = Math.max(Date.now(), seen); localStorage.setItem(LIC_SEEN, n); return n; }  // el reloj no puede ir para atrás
 async function checkLicense() {
-  try { const r = await fetch('licencia.json?t=' + Date.now(), {cache: 'no-store'}); if (r.ok) { LIC = await r.json(); localStorage.setItem(LIC_CACHE, JSON.stringify(LIC)); } } catch (e) {}
-  if (!LIC) { try { LIC = JSON.parse(localStorage.getItem(LIC_CACHE)); } catch (e) {} }
+  let fresh = null;
+  try { const r = await fetch('licencia.json?t=' + Date.now(), {cache: 'no-store'}); if (r.ok) fresh = await r.json(); } catch (e) {}
+  const now = nowSafe();
+  const d = fresh && await readLicense(fresh);
+  if (d) { LIC = d; LIC_STATUS = 'ok'; localStorage.setItem(LIC_CACHE, JSON.stringify({raw: fresh, at: now})); }
+  else {
+    let c = null; try { c = JSON.parse(localStorage.getItem(LIC_CACHE)); } catch (e) {}
+    const cd = c && await readLicense(c.raw);
+    if (fresh && !d) { LIC = cd || null; LIC_STATUS = 'invalida'; }
+    else if (cd && now - num(c.at) <= LIC_MAX_OFFLINE) { LIC = cd; LIC_STATUS = 'ok'; }
+    else if (cd || window.POHL_LIC_PUB) { LIC = cd || null; LIC_STATUS = 'sinverificar'; }
+    else { LIC = null; LIC_STATUS = 'ok'; }
+  }
   if (!ME) return;
-  const st = licState().s, key = st + '|' + (LIC && LIC.vence);
+  const st = licState().s, key = st + '|' + (LIC && LIC.vence) + '|' + LIC_STATUS;
   if (st !== 'bloqueado' && $('#lock-box')) { closeModal(); render(); }
-  else if (st === 'bloqueado') showLock();
+  else if (st === 'bloqueado') { if ($('#lock-box') && key !== checkLicense.last) closeModal(); showLock(); }
   else if (key !== checkLicense.last && !$('#modal-root').innerHTML) render();   // solo si cambió algo
   checkLicense.last = key;
 }
 function licState() {
+  if (LIC_STATUS === 'invalida') return {s: 'bloqueado', motivo: 'invalida'};
+  if (LIC_STATUS === 'sinverificar') return {s: 'bloqueado', motivo: 'sinverificar'};
   if (!LIC) return {s: 'ok'};
   if (LIC.estado === 'suspendido') return {s: 'bloqueado', suspendido: true};
   if (!LIC.vence) return {s: 'ok'};
-  const d = Math.floor((new Date(LIC.vence + 'T23:59:59').getTime() - Date.now()) / 864e5);
+  const d = Math.floor((new Date(LIC.vence + 'T23:59:59').getTime() - nowSafe()) / 864e5);
   if (d >= 0) return {s: d <= num(LIC.avisoDias ?? 5) ? 'proximo' : 'ok', d};
   const resta = num(LIC.gracia) + d;
   return resta >= 0 ? {s: 'gracia', d, resta} : {s: 'bloqueado', d};
@@ -1308,15 +1435,15 @@ function showLock() {
   const st = licState();
   modal(`<div id="lock-box" class="p-6 sm:p-8 text-center">
     <div class="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4"><i class="fas fa-lock fa-2x"></i></div>
-    <p class="eyebrow">${st.suspendido ? 'Servicio suspendido' : 'Abono vencido el ' + licVence()}</p>
+    <p class="eyebrow">${st.motivo === 'sinverificar' ? 'Sin verificar' : st.motivo === 'invalida' ? 'Licencia no válida' : st.suspendido ? 'Servicio suspendido' : 'Abono vencido el ' + licVence()}</p>
     <h2 class="text-2xl font-extrabold mt-2">El uso del sistema está en pausa</h2>
-    <p class="text-slate-500 mt-3">${esc(LIC.mensaje || 'Para seguir usando el sistema hay que regularizar el abono mensual.')}</p>
-    ${num(LIC.monto) ? `<p class="text-3xl font-extrabold mt-4">${money(LIC.monto)}</p>` : ''}
+    <p class="text-slate-500 mt-3">${st.motivo === 'sinverificar' ? 'Hace más de 3 días que no se puede verificar el abono. Conectate a internet y tocá «volver a verificar».' : st.motivo === 'invalida' ? 'No se pudo validar la licencia del sistema. Comunicate con el administrador.' : esc((LIC && LIC.mensaje) || 'Para seguir usando el sistema hay que pagar el abono mensual.')}</p>
+    ${LIC && num(LIC.monto) && !st.motivo ? `<p class="text-3xl font-extrabold mt-4">${money(LIC.monto)}</p>` : ''}
     <div class="card bg-slate-50 p-3 mt-4 text-sm"><i class="fas fa-shield-halved text-green-600 mr-1"></i>Tus órdenes, clientes y caja <b>están guardados y no se borran</b>. Se habilita apenas se registre el pago.</div>
     <div class="grid gap-2 mt-5">
       ${isAdmin() ? `<button class="btn text-white py-3" style="background:#009ee3" onclick="payLic()"><i class="fas fa-credit-card"></i> Pagar con Mercado Pago</button>
       <button class="btn btn-l" onclick="paidLic()"><i class="fab fa-whatsapp"></i> Ya pagué — enviar comprobante</button>
-      ${LIC.alias ? `<p class="text-xs text-slate-500">O transferí al alias <b class="font-mono">${esc(LIC.alias)}</b></p>` : ''}
+      ${LIC && LIC.alias ? `<p class="text-xs text-slate-500">O transferí al alias <b class="font-mono">${esc(LIC.alias)}</b></p>` : ''}
       <button class="btn btn-l" onclick="exportBackup()"><i class="fas fa-download"></i> Descargar copia de seguridad</button>` : `<p class="text-sm text-slate-500">Avisale al administrador del taller.</p>`}
       <button class="text-xs text-slate-400 underline mt-1" onclick="checkLicense().then(()=>toast(licState().s==='bloqueado'?'Todavía figura pendiente. Puede tardar unos minutos en acreditarse.':'¡Listo! Sistema habilitado.'))">Ya me lo habilitaron — volver a verificar</button>
       <button class="text-xs text-slate-400 underline" onclick="closeModal();logout()">Cerrar sesión</button>

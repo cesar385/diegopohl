@@ -24,8 +24,20 @@ y **no se borran**; además se guarda una copia en `pohl_v6_respaldo`.
 ## Abono mensual (panel del dueño)
 - `dueno.html` — panel del dueño del sistema (no usa el usuario de Diego). Se entra con un token
   fine-grained de GitHub con permiso *Contents: Read and write* solo sobre este repositorio.
-- `licencia.json` — lo escribe el panel: monto, vencimiento, días de aviso y de gracia, link de pago
-  de Mercado Pago, alias, estado (activo / suspendido). El sistema de Diego lo lee cada vez que se abre.
-- Avisos: amarillo N días antes, rojo durante la gracia, y bloqueo al terminar la gracia o si se suspende.
+- `licencia.json` — la publica el panel **firmada** (ECDSA P-256). La llave privada vive solo en el
+  navegador del dueño (con un archivo de respaldo); la pública está en `licencia-clave.js`.
+- Si no paga, no puede usar el sistema: aviso N días antes y bloqueo al vencer (gracia 0 por defecto).
+  Una licencia alterada o sin firma bloquea, y si no se puede verificar por más de 72 h, también.
   El bloqueo nunca borra datos: permite pagar, avisar "Ya pagué" y descargar la copia de seguridad.
-- El dinero va directo a la cuenta de Mercado Pago dueña del link de pago (o suscripción) cargado.
+- El cobro es con un plan de suscripción o link de pago de Mercado Pago del dueño (la plata va
+  directo a su cuenta). La tasa de Mercado Pago (7,99%) está incluida en el precio; el panel muestra el neto.
+
+## Seguridad
+- Contraseñas con PBKDF2-SHA256 (210.000 vueltas) y sal por usuario. No hay contraseñas en el código.
+- La contraseña inicial obliga a cambiarse en el primer ingreso. 5 intentos fallidos bloquean (5 min, y se duplica).
+- La sesión vence tras 12 h sin uso. Recuperación de contraseña con código firmado desde el panel (24 h, un uso).
+- Content-Security-Policy, sin referrer y todas las librerías servidas desde `vendor/`.
+
+## Estilos
+`vendor/app.css` se genera con Tailwind 3: `npx tailwindcss@3 -c tools/tailwind.config.js -i in.css -o vendor/app.css --minify`
+(volver a generarlo si se agregan clases nuevas).

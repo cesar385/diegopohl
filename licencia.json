@@ -6,7 +6,7 @@
   "vence": "2026-12-24",
   "diaVencimiento": 24,
   "avisoDias": 5,
-  "gracia": 5,
+  "gracia": 0,
   "estado": "activo",
   "linkPago": "",
   "alias": "",

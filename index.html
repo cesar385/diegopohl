@@ -45,7 +45,7 @@
   .meth:active{transform:scale(.97);} .meth>i:first-child{font-size:22px;color:var(--mc);}
   .meth.on{border-color:var(--mc);background:#f8fafc;background:color-mix(in srgb,var(--mc) 9%,#fff);color:#0f172a;box-shadow:0 0 0 3px color-mix(in srgb,var(--mc) 18%,transparent);}
   .meth .chk{position:absolute;top:6px;right:6px;font-size:13px;color:var(--mc);}
-  .mp-logo{display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;border-radius:11px;background:var(--mc);color:#fff;font-size:10px;font-weight:900;letter-spacing:-.02em;}
+  .mp-logo{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;border-radius:11px;background:var(--mc);color:#fff;font-size:10px;font-weight:900;letter-spacing:-.02em;}
   body{font-family:Inter,system-ui,sans-serif;background:#f6f7f9;color:#0f172a;-webkit-tap-highlight-color:transparent;}
   .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#cc0000;font-weight:700;}
   .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#64748b;font-weight:700;}
@@ -107,6 +107,7 @@
     </div>
     <span class="lbl">Federal · Entre Ríos</span>
   </header>
+  <div id="login-aviso" class="max-w-6xl mx-auto px-5"></div>
   <div class="max-w-6xl mx-auto px-5 grid lg:grid-cols-2 gap-10 items-center py-6 lg:py-14">
     <div>
       <p class="eyebrow mb-5">— Sistema de gestión · Chapa y pintura</p>
@@ -189,7 +190,7 @@
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.5.2';
+const APP_VERSION = '2.5.3';
 const SCHEMA = 2;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -437,7 +438,7 @@ function registerSW() {
 }
 
 /* ---------- sesión ---------- */
-function showLogin() { $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); }
+function showLogin() { $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); loginAviso(); }
 /* Sesión: vence tras 12 h sin uso. Intentos: 5 fallidos bloquean, y el bloqueo se duplica cada vez. */
 const SESSION_MS = 12 * 3600e3, TRIES_KEY = 'pohl_intentos';
 function touchSession() { if (ME) localStorage.setItem(SESSION_KEY, JSON.stringify({id: ME.id, exp: Date.now() + SESSION_MS})); }
@@ -564,6 +565,25 @@ function showAbonoAviso() {
       </div>
       <p class="text-[11px] text-slate-400 text-center">Lo podés ver cuando quieras en Configuración → Abono del sistema. <a class="underline" href="terminos.html" target="_blank">Términos y condiciones</a></p>
     </div></div>`, {locked: true});
+}
+/* Anuncio en la portada (pantalla de ingreso) */
+function loginAviso() {
+  const el = $('#login-aviso'); if (!el) return;
+  if (sessionStorage.getItem('pohl_aviso_cerrado')) { el.innerHTML = ''; return; }
+  const m = LIC && num(LIC.monto);
+  el.innerHTML = `<div class="rounded-2xl text-white p-4 sm:p-5 flex flex-wrap sm:flex-nowrap items-center gap-4 relative overflow-hidden" style="background:linear-gradient(120deg,#0f172a,#1e293b 60%,#7f1d1d)">
+    <div class="w-12 h-12 shrink-0 rounded-xl bg-white/10 flex items-center justify-center"><i class="fas fa-bullhorn text-brand-500 text-lg"></i></div>
+    <div class="flex-1 min-w-[200px]">
+      <p class="eyebrow !text-white/60">Novedad importante</p>
+      <p class="font-extrabold text-lg leading-snug mt-0.5">A partir de ahora, el sistema pasa a un abono mensual${m ? ` de <span class="whitespace-nowrap">${money(LIC.monto)}</span>` : ''}.</p>
+      <p class="text-sm text-white/70 mt-1">Incluye todas las funciones, las actualizaciones y la nube. Se paga con Mercado Pago${licSubs() ? ' y se debita solo cada mes' : ''}. Tus datos están seguros y no se borran.</p>
+    </div>
+    <div class="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto">
+      ${LIC && LIC.linkPago ? `<button class="btn text-white px-2 text-[13px] sm:text-sm" style="background:#009ee3" onclick="payLic()"><span class="mp-logo" style="--mc:#fff;color:#009ee3;background:#fff">MP</span> ${licSubs() ? 'Suscribirme' : 'Pagar'}</button>` : ''}
+      <a href="terminos.html" target="_blank" class="btn px-2 text-[13px] sm:text-sm bg-white/10 text-white hover:bg-white/20 ${LIC && LIC.linkPago ? '' : 'col-span-2'}">Ver condiciones</a>
+    </div>
+    <button onclick="sessionStorage.setItem('pohl_aviso_cerrado','1');loginAviso()" class="absolute top-2 right-2 w-8 h-8 rounded-full text-white/50 hover:text-white hover:bg-white/10" aria-label="Cerrar aviso"><i class="fas fa-xmark"></i></button>
+  </div>`;
 }
 function ackAbonoAviso() {
   DB.avisos = Object.assign({}, DB.avisos, {abono: {ts: Date.now(), por: ME.id, nombre: ME.name}}); save();
@@ -1491,6 +1511,7 @@ async function checkLicense() {
     else if (cd || window.POHL_LIC_PUB) { LIC = cd || null; LIC_STATUS = 'sinverificar'; }
     else { LIC = null; LIC_STATUS = 'ok'; }
   }
+  loginAviso();
   if (!ME) return;
   const st = licState().s, key = st + '|' + (LIC && LIC.vence) + '|' + LIC_STATUS;
   if (st !== 'bloqueado' && $('#lock-box')) { closeModal(); render(); }

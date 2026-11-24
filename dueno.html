@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0b1220">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -34,38 +34,52 @@
 <body class="min-h-screen">
 <header class="text-white"><div class="max-w-5xl mx-auto px-4 sm:px-5 py-5 flex items-center justify-between gap-3">
   <div><p class="lbl !text-sky-400">Panel del dueño del sistema</p><h1 class="text-xl sm:text-2xl font-extrabold">Abonos · POHL Taller</h1></div>
-  <button id="btn-out" class="hidden text-xs text-white/50 hover:text-white" onclick="lockPanel()"><i class="fas fa-lock mr-1"></i>Bloquear</button>
+  <button id="btn-out" class="hidden text-xs text-white/50 hover:text-white" onclick="lockPanel()"><i class="fas fa-right-from-bracket mr-1"></i>Cerrar sesión</button>
 </div></header>
 
 <main class="max-w-5xl mx-auto px-4 sm:px-5 pb-16">
-  <!-- PIN -->
-  <section id="v-pin" class="hidden card p-6 sm:p-8 max-w-sm mx-auto mt-6 text-center">
-    <div class="w-14 h-14 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center mx-auto mb-3"><i class="fas fa-lock fa-lg"></i></div>
-    <p class="lbl">Acceso del dueño</p>
-    <h2 class="text-xl font-extrabold mt-1">Ingresá tu PIN</h2>
-    <form onsubmit="event.preventDefault();unlock()" class="space-y-3 mt-5">
-      <input id="pin-in" class="inp text-center text-2xl tracking-[.4em] font-mono" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••">
-      <button class="btn b-d w-full">Entrar <i class="fas fa-arrow-right"></i></button>
+  <!-- INGRESO -->
+  <section id="v-login" class="hidden card p-6 sm:p-8 max-w-sm mx-auto mt-6">
+    <div class="w-14 h-14 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center mx-auto mb-3"><i class="fas fa-user-shield fa-lg"></i></div>
+    <p class="lbl text-center">Acceso del dueño</p>
+    <h2 class="text-xl font-extrabold mt-1 text-center">Iniciar sesión</h2>
+    <form onsubmit="event.preventDefault();login()" class="space-y-3 mt-5">
+      <input id="li-user" class="inp" placeholder="Usuario" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <input id="li-pass" class="inp" type="password" placeholder="Contraseña" autocomplete="current-password">
+      <button class="btn b-d w-full" id="li-btn">Entrar <i class="fas fa-arrow-right"></i></button>
     </form>
-    <button class="text-xs text-slate-400 underline mt-4" onclick="forgotPin()">Olvidé el PIN</button>
+    <p class="text-[11px] text-slate-400 mt-4 text-center">Funciona desde cualquier computadora o celular.</p>
+    <button class="text-xs text-slate-400 underline mt-2 block mx-auto" onclick="showSetup(true)">Olvidé la contraseña / configurar de nuevo</button>
   </section>
 
-  <!-- CONEXIÓN -->
-  <section id="v-login" class="hidden card p-5 sm:p-8 max-w-xl">
-    <p class="lbl">Acceso</p>
-    <h2 class="text-xl font-extrabold mt-1">Conectá tu cuenta de GitHub</h2>
-    <p class="text-sm text-slate-500 mt-2">Este panel no usa el usuario de Diego. La llave es un <b>token de GitHub</b> con permiso de escritura solo sobre el repositorio del sistema: sin ese token nadie puede cambiar el abono, aunque abra esta página.</p>
-    <ol class="steps text-sm text-slate-600 mt-4 list-decimal pl-5">
-      <li>Abrí <a class="text-sky-600 underline" target="_blank" rel="noopener" href="https://github.com/settings/personal-access-tokens/new">GitHub → Fine-grained token nuevo</a>.</li>
-      <li>En <b>Repository access</b> elegí <i>Only select repositories</i> → <code>diegopohl</code>.</li>
-      <li>En <b>Permissions → Contents</b> elegí <i>Read and write</i>. Poné un vencimiento (por ejemplo 1 año), generá y copiá el token.</li>
-    </ol>
+  <!-- CONFIGURACIÓN INICIAL DEL ACCESO -->
+  <section id="v-setup" class="hidden card p-5 sm:p-8 max-w-xl mx-auto mt-2">
+    <p class="lbl">Configurar acceso</p>
+    <h2 class="text-xl font-extrabold mt-1">Creá tu usuario y contraseña</h2>
+    <p class="text-sm text-slate-500 mt-2">Es un acceso propio del dueño, distinto del de Diego. Con él entrás desde cualquier equipo.</p>
+
+    <div id="su-pin" class="hidden mt-5 p-4 rounded-xl bg-slate-50">
+      <p class="text-sm font-semibold">Por única vez, ingresá el PIN que usabas en este navegador</p>
+      <input id="su-pin-in" class="inp mt-2 font-mono" type="password" inputmode="numeric" placeholder="PIN actual" autocomplete="off">
+      <button class="text-xs underline text-slate-500 mt-2" onclick="$('#su-pin').classList.add('hidden');$('#su-tok').classList.remove('hidden')">No me acuerdo del PIN: usar el token de GitHub</button>
+    </div>
+
+    <div id="su-tok" class="hidden mt-5">
+      <p class="text-sm font-semibold">Token de GitHub</p>
+      <ol class="steps text-xs text-slate-600 mt-1 list-decimal pl-5">
+        <li>Abrí <a class="text-sky-600 underline" target="_blank" rel="noopener" href="https://github.com/settings/personal-access-tokens">GitHub → Fine-grained tokens</a> (podés regenerar el que ya tenés).</li>
+        <li><i>Only select repositories</i> → <code>diegopohl</code>; <b>Permissions → Contents: Read and write</b>.</li>
+      </ol>
+      <input id="su-repo" class="inp font-mono mt-2" value="cesar385/diegopohl" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <input id="su-token" class="inp font-mono mt-2" type="password" placeholder="github_pat_…" autocomplete="off">
+    </div>
+
     <div class="space-y-3 mt-5">
-      <input id="l-repo" class="inp font-mono" value="cesar385/diegopohl" autocapitalize="none" autocorrect="off" spellcheck="false">
-      <input id="l-token" class="inp font-mono" type="password" placeholder="github_pat_…" autocomplete="off">
-      <div class="grid grid-cols-2 gap-3"><input id="l-pin" class="inp font-mono" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Elegí un PIN"><input id="l-pin2" class="inp font-mono" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Repetí el PIN"></div>
-      <button class="btn b-d w-full" onclick="connect()">Conectar <i class="fas fa-arrow-right"></i></button>
-      <p class="text-xs text-slate-400"><i class="fas fa-lock mr-1"></i>El token y la llave de firma quedan guardados <b>cifrados con tu PIN</b> en este navegador. La próxima vez entrás solo con el PIN.</p>
+      <input id="su-user" class="inp" placeholder="Usuario (ej: cesar)" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <div class="grid sm:grid-cols-2 gap-3"><input id="su-pass" class="inp" type="password" placeholder="Contraseña" autocomplete="new-password"><input id="su-pass2" class="inp" type="password" placeholder="Repetí la contraseña" autocomplete="new-password"></div>
+      <p class="text-[11px] text-slate-400">Mínimo 8 caracteres. Es la única protección de tu acceso, porque el archivo cifrado queda en el repositorio público para que puedas entrar desde cualquier lado.</p>
+      <button class="btn b-d w-full" id="su-btn" onclick="setup()">Guardar acceso y entrar <i class="fas fa-arrow-right"></i></button>
+      <button id="su-back" class="hidden text-xs underline text-slate-500 block mx-auto" onclick="location.reload()">Volver al inicio de sesión</button>
     </div>
   </section>
 
@@ -144,6 +158,7 @@
           <button class="btn b-l w-full" onclick="copyLink()"><i class="fas fa-link"></i> Copiar link de pago</button>
           <button id="btn-susp" class="btn b-r w-full" onclick="toggleSusp()"></button>
           <a class="btn b-l w-full" href="./" target="_blank" rel="noopener"><i class="fas fa-eye"></i> Ver el sistema de Diego</a>
+          <button class="btn b-l w-full" onclick="changeAccess()"><i class="fas fa-user-gear"></i> Cambiar mi usuario o contraseña</button>
         </div>
         <div class="card p-5 space-y-2">
           <p class="lbl mb-1">Recuperar contraseña de Diego</p>
@@ -188,33 +203,86 @@ const tok = () => TOKEN, repo = () => localStorage.getItem(RP) || 'cesar385/dieg
 const hist = () => { try { return JSON.parse(localStorage.getItem(HK)) || []; } catch (e) { return []; } };
 const tasa = () => { const t = localStorage.getItem(TASA); return t === null ? 7.99 : num(t); };
 const privJwk = () => PRIV;
-/* ---------- bóveda: token y llave cifrados con el PIN (PBKDF2 + AES-GCM) ---------- */
-const VK = 'pohl_dueno_boveda', PIN_TRIES = 'pohl_dueno_intentos';
+/* ---------- acceso del dueño: usuario y contraseña ----------
+   El token de GitHub y la llave de firma se cifran con AES-GCM usando una clave derivada
+   de usuario + contraseña (PBKDF2, 600.000 vueltas). El archivo cifrado se guarda en este
+   navegador y en el repositorio (dueno-acceso.json) para poder entrar desde cualquier equipo. */
+const VK = 'pohl_dueno_boveda', AK = 'pohl_dueno_acceso', ACC_FILE = 'dueno-acceso.json', TRIES = 'pohl_dueno_intentos', ITER = 600000;
 const rnd = n => crypto.getRandomValues(new Uint8Array(n));
 const toB = u => btoa(String.fromCharCode(...new Uint8Array(u))), fromB = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
-async function pinKey(pin, salt) { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']); return crypto.subtle.deriveKey({name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 310000}, k, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']); }
-let PIN = null;
-async function saveVault() {
-  if (!PIN) return; const salt = rnd(16), iv = rnd(12);
-  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, await pinKey(PIN, salt), new TextEncoder().encode(JSON.stringify({token: TOKEN, llave: PRIV})));
-  localStorage.setItem(VK, JSON.stringify({salt: toB(salt), iv: toB(iv), ct: toB(ct)}));
-  localStorage.removeItem(TK); localStorage.removeItem(KK);   // nada sin cifrar
+async function deriveKey(secret, salt, it) { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'PBKDF2', false, ['deriveKey']); return crypto.subtle.deriveKey({name: 'PBKDF2', hash: 'SHA-256', salt, iterations: it}, k, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']); }
+const credSecret = (u, p) => 'pohl-dueno|' + u.trim().toLowerCase() + '|' + p;
+let USER = null, CRED = null;
+async function sealAccess() {
+  const salt = rnd(16), iv = rnd(12);
+  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, await deriveKey(CRED, salt, ITER), new TextEncoder().encode(JSON.stringify({usuario: USER, token: TOKEN, llave: PRIV, repo: repo()})));
+  return JSON.stringify({v: 2, it: ITER, salt: toB(salt), iv: toB(iv), ct: toB(ct)});
 }
-async function openVault(pin) { const v = JSON.parse(localStorage.getItem(VK)); const pt = await crypto.subtle.decrypt({name: 'AES-GCM', iv: fromB(v.iv)}, await pinKey(pin, fromB(v.salt)), fromB(v.ct)); return JSON.parse(new TextDecoder().decode(pt)); }
-async function unlock() {
-  const t = JSON.parse(localStorage.getItem(PIN_TRIES) || '{"n":0,"until":0}');
-  if (t.until > Date.now()) return toast('Demasiados intentos. Esperá ' + Math.ceil((t.until - Date.now()) / 60e3) + ' min.');
-  const pin = $('#pin-in').value; if (!pin) return;
-  try { const d = await openVault(pin); TOKEN = d.token; PRIV = d.llave; PIN = pin; localStorage.removeItem(PIN_TRIES); $('#pin-in').value = ''; }
-  catch (e) { t.n++; if (t.n >= 5) { t.until = Date.now() + 10 * 60e3; t.n = 0; } localStorage.setItem(PIN_TRIES, JSON.stringify(t)); $('#pin-in').value = ''; return toast(t.until > Date.now() ? 'Demasiados intentos: bloqueado 10 min' : 'PIN incorrecto'); }
-  $('#v-pin').classList.add('hidden');
-  try { await load(); show(); } catch (e) { toast(e.message, 8000); $('#v-login').classList.remove('hidden'); }
+async function openAccess(blob, secret) { const v = JSON.parse(blob); const pt = await crypto.subtle.decrypt({name: 'AES-GCM', iv: fromB(v.iv)}, await deriveKey(secret, fromB(v.salt), v.it || 310000), fromB(v.ct)); return JSON.parse(new TextDecoder().decode(pt)); }
+async function remoteAccess() { try { const r = await fetch(ACC_FILE + '?t=' + Date.now(), {cache: 'no-store'}); if (r.ok) { const t = await r.text(); JSON.parse(t); return t; } } catch (e) {} return null; }
+async function storeAccess() {   // guarda local y publica en el repo
+  const blob = await sealAccess();
+  localStorage.setItem(AK, blob); localStorage.removeItem(VK); localStorage.removeItem(TK); localStorage.removeItem(KK);
+  const f = await getFile(ACC_FILE); await putFile(ACC_FILE, blob + '\n', 'Panel: acceso cifrado del dueño', f && f.sha);
 }
-function lockPanel() { TOKEN = PRIV = PIN = null; location.reload(); }
-function forgotPin() {
-  if (!confirm('Se borran el token y la llave guardados en este navegador. Vas a tener que pegar el token de nuevo y elegir un PIN nuevo; la llave la recuperás importando el archivo de respaldo (pohl-llave-privada…json). ¿Seguir?')) return;
-  localStorage.removeItem(VK); localStorage.removeItem(PIN_TRIES); location.reload();
+function tooMany() { const t = JSON.parse(localStorage.getItem(TRIES) || '{"n":0,"until":0}'); return t.until > Date.now() ? Math.ceil((t.until - Date.now()) / 60e3) : 0; }
+function failTry() { const t = JSON.parse(localStorage.getItem(TRIES) || '{"n":0,"until":0}'); t.n++; if (t.n >= 5) { t.until = Date.now() + 10 * 60e3; t.n = 0; } localStorage.setItem(TRIES, JSON.stringify(t)); return t.until > Date.now(); }
+async function login() {
+  const m = tooMany(); if (m) return toast('Demasiados intentos. Esperá ' + m + ' min.');
+  const u = $('#li-user').value.trim(), p = $('#li-pass').value; if (!u || !p) return toast('Completá usuario y contraseña');
+  $('#li-btn').disabled = true; $('#li-btn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando…';
+  const secret = credSecret(u, p);
+  let d = null;
+  for (const blob of [localStorage.getItem(AK), await remoteAccess()].filter(Boolean)) { try { d = await openAccess(blob, secret); break; } catch (e) {} }
+  $('#li-btn').disabled = false; $('#li-btn').innerHTML = 'Entrar <i class="fas fa-arrow-right"></i>';
+  if (!d) { $('#li-pass').value = ''; return toast(failTry() ? 'Demasiados intentos: bloqueado 10 min' : 'Usuario o contraseña incorrectos'); }
+  localStorage.removeItem(TRIES);
+  TOKEN = d.token; PRIV = d.llave; USER = d.usuario; CRED = secret; if (d.repo) localStorage.setItem(RP, d.repo);
+  $('#li-pass').value = ''; $('#v-login').classList.add('hidden');
+  try { await load(); show(); } catch (e) { toast(e.message + ' — si cambiaste el token, tocá «configurar de nuevo».', 9000); $('#v-login').classList.remove('hidden'); }
 }
+function showSetup(again) {
+  $('#v-login').classList.add('hidden'); $('#v-setup').classList.remove('hidden');
+  const hasPin = !!localStorage.getItem(VK);
+  $('#su-pin').classList.toggle('hidden', !hasPin); $('#su-tok').classList.toggle('hidden', hasPin);
+  $('#su-back').classList.toggle('hidden', !again);
+  const legacy = localStorage.getItem(TK); if (legacy) $('#su-token').value = legacy;
+  $('#su-repo').value = repo();
+}
+async function setup() {
+  const u = $('#su-user').value.trim(), p1 = $('#su-pass').value, p2 = $('#su-pass2').value;
+  if (u.length < 3) return toast('El usuario tiene que tener al menos 3 caracteres');
+  if (p1.length < 8) return toast('La contraseña tiene que tener al menos 8 caracteres'); if (p1 !== p2) return toast('Las contraseñas no coinciden');
+  const btn = $('#su-btn'); btn.disabled = true;
+  try {
+    if (!$('#su-pin').classList.contains('hidden')) {   // migración desde el PIN de la versión anterior
+      const v = JSON.parse(localStorage.getItem(VK));
+      let d; try { d = await openAccess(JSON.stringify({...v, it: 310000}), $('#su-pin-in').value); } catch (e) { throw new Error('PIN incorrecto'); }
+      TOKEN = d.token; PRIV = d.llave;
+    } else {
+      TOKEN = $('#su-token').value.trim(); if (!TOKEN) throw new Error('Pegá el token de GitHub');
+      localStorage.setItem(RP, $('#su-repo').value.trim() || 'cesar385/diegopohl');
+      if (!PRIV) { try { PRIV = JSON.parse(localStorage.getItem(KK)); } catch (e) {} }
+      if (!PRIV && localStorage.getItem(AK)) PRIV = null;
+    }
+    await load();
+    USER = u; CRED = credSecret(u, p1);
+    await storeAccess();
+    $('#v-setup').classList.add('hidden'); show();
+    toast('Acceso creado. Desde ahora entrás con tu usuario y contraseña.' + (PRIV ? '' : ' Importá la llave de firma (arriba).'), 7000);
+  } catch (e) { toast(e.message, 8000); }
+  btn.disabled = false;
+}
+async function changeAccess() {
+  const u = prompt('Usuario nuevo', USER || ''); if (u === null) return;
+  const p = prompt('Contraseña nueva (mínimo 8 caracteres)'); if (p === null) return;
+  if (u.trim().length < 3 || p.length < 8) return toast('Usuario de 3+ caracteres y contraseña de 8+');
+  if (prompt('Repetí la contraseña') !== p) return toast('No coinciden');
+  USER = u.trim(); CRED = credSecret(USER, p);
+  try { await storeAccess(); toast('Usuario y contraseña actualizados'); } catch (e) { toast(e.message, 8000); }
+}
+async function saveVault() { if (CRED) try { await storeAccess(); } catch (e) { toast(e.message, 8000); } }   // la llave cambió: se vuelve a cifrar
+function lockPanel() { TOKEN = PRIV = USER = CRED = null; location.reload(); }
 
 /* ---------- utilidades de codificación y firma ---------- */
 const utf8b64 = s => btoa(unescape(encodeURIComponent(s)));
@@ -259,18 +327,6 @@ async function publish(msg) {
   const text = JSON.stringify({token, actualizado: new Date().toISOString()}, null, 2) + '\n';
   try { SHA = await putFile(FILE, text, msg, SHA); }
   catch (e) { if (e.status === 409 || e.status === 422) { await load(); throw new Error('El archivo cambió en otro lado; se recargó. Repetí la acción.'); } throw e; }
-}
-async function connect() {
-  const t = $('#l-token').value.trim(); if (!t) return toast('Pegá el token');
-  const p1 = $('#l-pin').value, p2 = $('#l-pin2').value;
-  if (p1.length < 4) return toast('El PIN tiene que tener al menos 4 números o letras'); if (p1 !== p2) return toast('Los PIN no coinciden');
-  localStorage.setItem(RP, $('#l-repo').value.trim() || 'cesar385/diegopohl');
-  TOKEN = t;
-  try {
-    await load();
-    if (!PRIV) { try { PRIV = JSON.parse(localStorage.getItem(KK)); } catch (e) {} }   // llave guardada sin cifrar de antes
-    PIN = p1; await saveVault(); show(); $('#l-token').value = $('#l-pin').value = $('#l-pin2').value = ''; toast('Conectado. Desde ahora entrás con tu PIN.');
-  } catch (e) { TOKEN = null; toast(e.message, 6000); }
 }
 
 
@@ -324,7 +380,7 @@ function calcNeto() {
 }
 function fromNeto() { const q = num($('#c-quiero').value), t = num($('#c-tasa').value); if (!q) return toast('Escribí cuánto querés recibir'); $('#c-monto').value = Math.ceil(q / (1 - t / 100) / 10) * 10; calcNeto(); toast('Precio calculado. Guardá y publicá.'); }
 function show() {
-  $('#v-login').classList.add('hidden'); $('#v-panel').classList.remove('hidden'); $('#btn-out').classList.remove('hidden');
+  $('#v-login').classList.add('hidden'); $('#v-setup').classList.add('hidden'); $('#v-panel').classList.remove('hidden'); $('#btn-out').classList.remove('hidden');
   $('#repo-name').textContent = repo();
   $('#key-card').innerHTML = keyCard();
   const st = state(), h = hist(), year = String(new Date().getFullYear());
@@ -410,11 +466,8 @@ function exportHist() { dl('abonos_pohl_respaldo.json', JSON.stringify(hist()), 
 function importHist(inp) { const f = inp.files[0]; if (!f) return; f.text().then(t => { try { const a = JSON.parse(t); if (!Array.isArray(a)) throw 0; const h = hist(); a.forEach(p => { if (!h.some(x => x.ts === p.ts)) h.push(p); }); h.sort((x, y) => x.fecha.localeCompare(y.fecha)); localStorage.setItem(HK, JSON.stringify(h)); show(); toast('Historial importado'); } catch (e) { toast('Archivo inválido'); } }); }
 
 (async () => {
-  $('#l-repo').value = repo();
-  if (localStorage.getItem(VK)) { $('#v-pin').classList.remove('hidden'); setTimeout(() => $('#pin-in').focus(), 50); return; }
-  const legacy = localStorage.getItem(TK);   // versión anterior: token sin cifrar → se pide PIN para cifrarlo
-  if (legacy) { $('#l-token').value = legacy; toast('Elegí un PIN para proteger tu acceso', 5000); }
-  $('#v-login').classList.remove('hidden');
+  if (localStorage.getItem(AK) || await remoteAccess()) { $('#v-login').classList.remove('hidden'); setTimeout(() => $('#li-user').focus(), 50); }
+  else showSetup(false);
 })();
 </script>
 </body>

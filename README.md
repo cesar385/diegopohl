@@ -22,9 +22,9 @@ y **no se borran**; además se guarda una copia en `pohl_v6_respaldo`.
    automático (`pohl_taller_respaldo_previo`) y se recarga. Desde Configuración se puede volver a ese respaldo.
 
 ## Abono mensual (panel del dueño)
-- `dueno.html` — panel del dueño del sistema (no usa el usuario de Diego; link «Administración» en el pie).
-  La primera vez se conecta un token fine-grained de GitHub (*Contents: Read and write* solo sobre este repo)
-  y se elige un PIN; el token y la llave de firma quedan cifrados con el PIN (AES-GCM) y después se entra solo con el PIN.
+- `dueno.html` — panel del dueño del sistema, con usuario y contraseña propios (link «Administración» en el pie).
+  El token de GitHub y la llave de firma van cifrados (AES-GCM, clave PBKDF2 de usuario+contraseña, 600.000 vueltas)
+  en `dueno-acceso.json`, así se puede entrar desde cualquier equipo.
 - `licencia.json` — la publica el panel **firmada** (ECDSA P-256). La llave privada vive solo en el
   navegador del dueño (con un archivo de respaldo); la pública está en `licencia-clave.js`.
 - Si no paga, no puede usar el sistema: aviso N días antes y bloqueo al vencer (gracia 0 por defecto).
@@ -40,7 +40,8 @@ y **no se borran**; además se guarda una copia en `pohl_v6_respaldo`.
 - Content-Security-Policy, sin referrer y todas las librerías servidas desde `vendor/`.
 
 ## Páginas legales
-`terminos.html` y `cookies.html`, enlazadas en el pie de todas las páginas.
+`terminos.html` y `cookies.html`, enlazadas en el pie de todas las páginas. Se aceptan una vez al ingresar
+(se guarda en los datos del taller; si cambian, subir `LEGAL_VERSION` en index.html para volver a pedirlas).
 
 ## Estilos
 `vendor/app.css` se genera con Tailwind 3: `npx tailwindcss@3 -c tools/tailwind.config.js -i in.css -o vendor/app.css --minify`

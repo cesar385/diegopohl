@@ -189,7 +189,7 @@
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.4.0';
 const SCHEMA = 2;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -505,6 +505,30 @@ function showApp() {
   $('#me-name').textContent = ME.name; $('#me-role').textContent = ME.role === 'admin' ? 'Administrador' : 'Técnico';
   $('#ver-side').textContent = 'v' + APP_VERSION;
   if (!location.hash || location.hash === '#') location.hash = isAdmin() ? '#/panel' : '#/ordenes'; else render();
+  if (needLegal()) showLegal();
+}
+/* Términos y condiciones + política de cookies: se aceptan una sola vez (se vuelve a pedir solo si cambian). */
+const LEGAL_VERSION = '2026-11-24';
+const needLegal = () => !(DB.legal && DB.legal.version === LEGAL_VERSION);
+function showLegal() {
+  modal(`<div id="legal-box" class="p-6 sm:p-8">
+    <div class="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4"><i class="fas fa-file-contract fa-lg"></i></div>
+    <p class="eyebrow">Antes de continuar</p>
+    <h2 class="text-xl sm:text-2xl font-extrabold mt-1">Términos y condiciones y política de cookies</h2>
+    <p class="text-sm text-slate-500 mt-3">Para seguir usando el sistema, leé y aceptá las condiciones de uso. Se aceptan <b>una sola vez</b>.</p>
+    <div class="grid sm:grid-cols-2 gap-2 mt-4">
+      <a href="terminos.html" target="_blank" rel="noopener" class="card p-3 flex items-center gap-3 hover:border-brand-600"><i class="fas fa-scale-balanced text-brand-600"></i><span class="text-sm font-bold flex-1">Términos y condiciones</span><i class="fas fa-up-right-from-square text-xs text-slate-400"></i></a>
+      <a href="cookies.html" target="_blank" rel="noopener" class="card p-3 flex items-center gap-3 hover:border-brand-600"><i class="fas fa-cookie-bite text-brand-600"></i><span class="text-sm font-bold flex-1">Política de cookies</span><i class="fas fa-up-right-from-square text-xs text-slate-400"></i></a>
+    </div>
+    <label class="flex items-start gap-3 mt-5 p-3 rounded-xl bg-slate-50 cursor-pointer text-sm"><input type="checkbox" id="lg-ok" class="w-5 h-5 mt-0.5 accent-red-600 shrink-0" onchange="$('#lg-btn').disabled=!this.checked;$('#lg-btn').style.opacity=this.checked?1:.5"><span>Leí y acepto los <b>Términos y condiciones</b> y la <b>Política de cookies</b>.</span></label>
+    <button id="lg-btn" class="btn btn-p w-full mt-4" disabled style="opacity:.5" onclick="acceptLegal()"><i class="fas fa-check"></i> Aceptar y continuar</button>
+    <button class="text-xs text-slate-400 underline mt-3 block mx-auto" onclick="closeModal();logout()">No acepto — cerrar sesión</button>
+  </div>`, {locked: true});
+}
+function acceptLegal() {
+  if (!$('#lg-ok').checked) return;
+  DB.legal = {version: LEGAL_VERSION, ts: Date.now(), por: ME.id, nombre: ME.name}; save();
+  closeModal(); render(); toast('¡Gracias! Condiciones aceptadas.');
 }
 function go(v, id) { location.hash = '#/' + v + (id ? '/' + id : ''); }
 window.addEventListener('hashchange', () => { if (ME) render(); });
@@ -525,7 +549,7 @@ function render() {
   const fn = views[v] || vOrdenes;
   $('#top-title').textContent = (NAV.find(n => n.v === active) || {t: ''}).t;
   $('#main').innerHTML = licBanner() + (fn(id) || '');
-  if (licState().s === 'bloqueado') showLock();
+  if (needLegal()) { if (!$('#legal-box')) showLegal(); } else if (licState().s === 'bloqueado') showLock();
   window.scrollTo(0, 0);
   if (fn.after) fn.after(id);
 }
@@ -1328,6 +1352,7 @@ function vConfig() {
         ${localStorage.getItem(BACKUP_KEY) ? `<button class="btn btn-l btn-wrap w-full mt-2" onclick="restorePrev()"><i class="fas fa-rotate-left shrink-0"></i><span>Restaurar el respaldo automático<br><span class="text-xs font-normal text-slate-500">el que se guardó antes de la última actualización</span></span></button>` : ''}
         <p class="text-[11px] text-slate-400 mt-3 font-mono">${DB.orders.length} órdenes · ${DB.clients.length} clientes · ${DB.products.length} productos · ${(used / 1024).toFixed(0)} KB</p></div>
       ${licCard()}
+      ${DB.legal ? `<div class="card p-4 text-xs text-slate-500"><i class="fas fa-file-contract text-green-600 mr-1"></i>Términos y política de cookies aceptados el ${fDT(DB.legal.ts)} por ${esc(DB.legal.nombre || '')}. <a class="underline" href="terminos.html" target="_blank">Ver</a></div>` : ''}
       <div class="card p-5"><p class="lbl mb-2">Versión del sistema</p><div class="flex justify-between items-center"><span class="font-mono font-bold">v${APP_VERSION}</span><button class="btn btn-l btn-sm" onclick="checkVersion(true)"><i class="fas fa-rotate"></i> Buscar actualización</button></div>
         <a href="version-anterior.html" class="text-xs text-slate-400 underline mt-2 inline-block">Abrir la versión anterior (solo presupuestos)</a></div>
     </div>
@@ -1423,7 +1448,7 @@ async function checkLicense() {
   if (!ME) return;
   const st = licState().s, key = st + '|' + (LIC && LIC.vence) + '|' + LIC_STATUS;
   if (st !== 'bloqueado' && $('#lock-box')) { closeModal(); render(); }
-  else if (st === 'bloqueado') { if ($('#lock-box') && key !== checkLicense.last) closeModal(); showLock(); }
+  else if (st === 'bloqueado') { if ($('#legal-box')) { checkLicense.last = key; return; } if ($('#lock-box') && key !== checkLicense.last) closeModal(); showLock(); }
   else if (key !== checkLicense.last && !$('#modal-root').innerHTML) render();   // solo si cambió algo
   checkLicense.last = key;
 }

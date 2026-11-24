@@ -11,7 +11,7 @@ self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  if (/version\.json|licencia\.json|licencia-clave\.js/.test(req.url)) return; // siempre a la red // siempre directo a la red
+  if (/version\.json|licencia\.json|licencia-clave\.js|dueno-acceso\.json/.test(req.url)) return; // siempre a la red // siempre directo a la red
   e.respondWith(
     fetch(req).then(res => {
       if (res && (res.ok || res.type === 'opaque')) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {}); }

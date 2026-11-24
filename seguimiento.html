@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seguimiento de tu vehículo — POHL Chapa y Pintura</title>
+<meta name="theme-color" content="#cc0000">
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7f9}.mono{font-family:'JetBrains Mono',monospace;letter-spacing:.12em}</style>
+</head>
+<body class="min-h-screen">
+<header class="bg-black text-white"><div class="max-w-md mx-auto px-5 py-3 flex items-center justify-between"><img src="img-removebg-preview.png" class="h-10" alt="POHL" onerror="this.outerHTML='<b>POHL</b>'"><span class="mono text-[10px] uppercase text-white/60">Seguimiento</span></div></header>
+<main class="max-w-md mx-auto p-5" id="m"></main>
+<script>
+const ST = [['recibido', 'Recibido', 'fa-car-side'], ['presupuesto', 'Presupuesto', 'fa-file-invoice-dollar'], ['aprobado', 'Aprobado', 'fa-thumbs-up'], ['reparacion', 'En reparación', 'fa-screwdriver-wrench'], ['listo', 'Listo para retirar', 'fa-key'], ['entregado', 'Entregado', 'fa-flag-checkered']];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const money = n => '$ ' + (Number(n) || 0).toLocaleString('es-AR', {maximumFractionDigits: 2});
+const dt = ts => new Date(ts).toLocaleDateString('es-AR', {day: 'numeric', month: 'short'}) + ' ' + new Date(ts).toLocaleTimeString('es-AR', {hour: '2-digit', minute: '2-digit'});
+let d = null;
+try { let h = location.hash.slice(1).replace(/-/g, '+').replace(/_/g, '/'); while (h.length % 4) h += '='; d = JSON.parse(decodeURIComponent(escape(atob(h)))); } catch (e) {}
+const m = document.getElementById('m');
+if (!d) m.innerHTML = '<div class="bg-white rounded-2xl border p-8 text-center mt-6"><i class="fas fa-link-slash fa-2x text-slate-300"></i><p class="font-bold mt-3">Link inválido</p><p class="text-sm text-slate-500">Pedile al taller que te reenvíe el link de tu orden.</p></div>';
+else {
+  const last = {}; (d.h || []).forEach(([s, t]) => last[s] = t);
+  const cur = d.s; const ci = ST.findIndex(x => x[0] === cur);
+  const saldo = (d.tot || 0) - (d.pag || 0);
+  const cancel = cur === 'cancelado';
+  m.innerHTML = `
+  <p class="mono text-[11px] uppercase text-red-600 font-bold mt-2">— Orden #${esc(d.n)}</p>
+  <h1 class="text-3xl font-extrabold leading-tight mt-1">Hola ${esc(d.c || '')} 👋</h1>
+  <p class="text-slate-500 mt-1">Así va tu <b>${esc(d.v)}</b>${d.d ? ` <span class="mono text-xs bg-slate-900 text-white px-1.5 py-0.5 rounded">${esc(d.d)}</span>` : ''}</p>
+  ${cancel ? '<div class="mt-5 p-4 rounded-2xl bg-red-50 text-red-700 font-bold">Esta orden fue cancelada.</div>' : ''}
+  <div class="bg-white rounded-2xl border p-5 mt-5">
+    ${ST.map(([k, t, i], idx) => { const done = !cancel && idx <= ci && (last[k] || idx < ci); const on = k === cur; return `
+      <div class="flex gap-4 ${idx < ST.length - 1 ? 'pb-5' : ''} relative">
+        ${idx < ST.length - 1 ? `<div class="absolute left-[17px] top-9 bottom-0 w-0.5 ${done && idx < ci ? 'bg-red-600' : 'bg-slate-200'}"></div>` : ''}
+        <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${on ? 'bg-red-600 text-white ring-4 ring-red-100' : done ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-400'}"><i class="fas ${i} text-sm"></i></div>
+        <div class="flex-1 pt-1.5"><p class="font-bold ${on ? 'text-red-600' : done ? '' : 'text-slate-400'}">${t}</p><p class="text-xs text-slate-400">${last[k] ? dt(last[k]) : on ? 'ahora' : '—'}</p></div>
+      </div>`; }).join('')}
+  </div>
+  ${d.tot ? `<div class="bg-white rounded-2xl border p-5 mt-3 text-sm space-y-1"><div class="flex justify-between"><span>Total</span><b>${money(d.tot)}</b></div>${d.pag ? `<div class="flex justify-between text-slate-500"><span>Pagado</span><span>${money(d.pag)}</span></div>` : ''}<div class="flex justify-between text-lg ${saldo > 0 ? 'text-red-600' : 'text-green-600'}"><b>${saldo > 0 ? 'Saldo' : 'Pagado'}</b><b>${money(saldo > 0 ? saldo : d.pag)}</b></div></div>` : ''}
+  ${d.e && d.g ? `<div class="bg-green-50 text-green-800 rounded-2xl p-4 mt-3 text-sm"><i class="fas fa-shield-halved mr-1"></i>Garantía de ${d.g} días, hasta el ${new Date(d.e + d.g * 864e5).toLocaleDateString('es-AR')}.</div>` : ''}
+  ${d.tel ? `<a href="https://wa.me/549${String(d.tel).replace(/\D/g, '').replace(/^0/, '')}?text=${encodeURIComponent('Hola! Consulto por la orden #' + d.n)}" class="mt-4 flex items-center justify-center gap-2 bg-green-600 text-white font-bold rounded-xl py-3"><i class="fab fa-whatsapp text-lg"></i> Escribir al taller</a>` : ''}
+  <p class="text-[11px] text-slate-400 text-center mt-4">Estado al ${dt(d.at || Date.now())}. ${esc(d.t || '')}</p>`;
+}
+</script>
+</body>
+</html>

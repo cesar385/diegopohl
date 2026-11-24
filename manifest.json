@@ -1,0 +1,12 @@
+{
+  "name": "POHL Chapa y Pintura - Gestión del Taller",
+  "short_name": "POHL Taller",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#cc0000",
+  "icons": [
+    { "src": "img-removebg-preview.png", "sizes": "612x408", "type": "image/png", "purpose": "any" }
+  ]
+}

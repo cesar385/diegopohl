@@ -189,7 +189,7 @@
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.5.1';
 const SCHEMA = 2;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -355,7 +355,9 @@ async function boot() {
   checkVersion(); setInterval(checkVersion, 30 * 60 * 1000);
   checkLicense(); setInterval(checkLicense, 60 * 60 * 1000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkVersion(); checkLicense(); if (SYNC.cfg) syncNow(); } });
-  setInterval(() => { if (SYNC.cfg && !document.hidden) syncNow(); }, 30e3);
+  setInterval(() => { if (SYNC.cfg && !document.hidden) syncNow(); }, SYNC.every);
+  window.addEventListener('online', () => { if (SYNC.cfg) syncNow(); });
+  window.addEventListener('focus', () => { if (SYNC.cfg) syncNow(); });
   rotWords();
 }
 async function start() {
@@ -578,7 +580,7 @@ function modal(html, opt = {}) {
   root.innerHTML = `<div class="modal-bg" ${opt.locked ? '' : 'onclick="if(event.target===this)closeModal()"'}><div class="modal-box ${opt.wide ? '!max-w-3xl' : ''}">${html}</div></div>`;
   document.body.style.overflow = 'hidden';
 }
-function closeModal(force) { $('#modal-root').innerHTML = ''; document.body.style.overflow = ''; }
+function closeModal(force) { $('#modal-root').innerHTML = ''; document.body.style.overflow = ''; if (typeof SYNC !== 'undefined' && SYNC.pendRender && ME) { SYNC.pendRender = false; setTimeout(() => { if (!$('#modal-root').innerHTML && route().v !== 'nueva') render(); }, 50); } }
 function mHead(t, sub) { return `<div class="px-5 pt-5 pb-3 flex items-start justify-between border-b sticky top-0 bg-white z-10"><div><p class="lbl">${sub || ''}</p><h3 class="text-lg font-extrabold">${t}</h3></div><button onclick="closeModal()" class="w-9 h-9 rounded-full hover:bg-slate-100"><i class="fas fa-xmark"></i></button></div>`; }
 function ask(msg, ok = 'Confirmar', danger) {
   return new Promise(res => {
@@ -1540,7 +1542,7 @@ function showLock() {
    distintas, se conservan las dos; si cambian lo mismo, gana el último que sincroniza.
    ===================================================================== */
 const SYNC_KEY = 'pohl_nube', SYNC_PHOTOS = 'pohl_nube_fotos', SYNC_LAST = 'pohl_nube_ultimo', DATA_FILE = 'datos.enc.json';
-const SYNC = {cfg: null, busy: false, again: false, timer: null, err: '', linking: false};
+const SYNC = {cfg: null, busy: false, again: false, timer: null, err: '', linking: false, etag: null, every: 10e3};
 function syncCfg() { try { const c = JSON.parse(localStorage.getItem(SYNC_KEY)); return c && c.r && c.t && c.k ? c : null; } catch (e) { return null; } }
 function parseLink() {
   const m = location.hash.match(/^#vincular=([A-Za-z0-9_-]+)/); if (!m) return null;
@@ -1558,7 +1560,17 @@ async function ghApi(path, opt = {}) {
   return r.json();
 }
 const u8b64 = s => btoa(unescape(encodeURIComponent(s))), b64u8 = s => decodeURIComponent(escape(atob(String(s).replace(/\n/g, ''))));
-async function ghGet(name) { const j = await ghApi('/contents/' + name, {allow404: true}); if (!j) return null; let c = j.content; if (!c) c = (await ghApi('/git/blobs/' + j.sha)).content; return {sha: j.sha, text: b64u8(c)}; }
+async function ghGet(name, etagSlot) {
+  const h = {Authorization: 'Bearer ' + SYNC.cfg.t, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'};
+  if (etagSlot && SYNC.etag) h['If-None-Match'] = SYNC.etag;
+  const r = await fetch('https://api.github.com/repos/' + SYNC.cfg.r + '/contents/' + name, {cache: 'no-store', headers: h});
+  if (r.status === 304) return 'igual';                 // sin cambios en la nube (no gasta cupo de GitHub)
+  if (r.status === 404) return null;
+  if (!r.ok) { const e = new Error('GitHub ' + r.status); e.status = r.status; throw e; }
+  if (etagSlot) SYNC.etag = r.headers.get('ETag') || null;
+  const j = await r.json(); let c = j.content; if (!c) c = (await ghApi('/git/blobs/' + j.sha)).content;
+  return {sha: j.sha, text: b64u8(c)};
+}
 async function ghPut(name, text, msg, sha) { const b = {message: msg, content: u8b64(text)}; if (sha) b.sha = sha; return (await ghApi('/contents/' + name, {method: 'PUT', body: JSON.stringify(b)})).content.sha; }
 
 const COLS = ['users', 'clients', 'orders', 'products', 'moves', 'cash', 'sales', 'closures'];
@@ -1585,7 +1597,7 @@ function merge3(B, L, R) {
   M.products.forEach(p => { const mv = M.moves.filter(m => m.pid === p.id); if (mv.length) p.stock = mv.reduce((a, m) => a + num(m.qty), 0); });
   return migrate(M);
 }
-function scheduleSync(ms = 2500) { clearTimeout(SYNC.timer); SYNC.timer = setTimeout(() => syncNow(), ms); }
+function scheduleSync(ms = 1200) { clearTimeout(SYNC.timer); SYNC.timer = setTimeout(() => syncNow(), ms); }
 async function syncNow(manual) {
   if (!SYNC.cfg) return;
   if (SYNC.busy) { SYNC.again = true; return; }
@@ -1593,12 +1605,14 @@ async function syncNow(manual) {
   try {
     for (let i = 0; i < 4; i++) {
       const snap = JSON.stringify(DB), L = JSON.parse(snap);
-      const f = await ghGet(DATA_FILE);
-      const R = f ? await dec(f.text) : null;
       const B = await PH.get('__base');
+      const localSame = B && JSON.stringify(B) === snap;
+      let f = await ghGet(DATA_FILE, i === 0 && localSame);
+      if (f === 'igual') { if (localSame) break; f = await ghGet(DATA_FILE); }   // nada nuevo de ningún lado
+      const R = f ? await dec(f.text) : null;
       const M = merge3(B, L, R);
       if (!R || !same(M, R)) {
-        try { await ghPut(DATA_FILE, await enc(M), 'Datos del taller · ' + new Date().toLocaleString('es-AR'), f && f.sha); }
+        try { await ghPut(DATA_FILE, await enc(M), 'Datos del taller · ' + new Date().toLocaleString('es-AR'), f && f.sha); SYNC.etag = null; }
         catch (e) { if (e.status === 409 || e.status === 422) continue; throw e; }
       }
       if (JSON.stringify(DB) === snap) {   // nadie tocó nada mientras sincronizaba
@@ -1619,7 +1633,7 @@ async function syncNow(manual) {
 function softRender() {
   const busyUI = $('#modal-root').innerHTML || route().v === 'nueva' || ['INPUT', 'TEXTAREA', 'SELECT'].includes((document.activeElement || {}).tagName);
   if (!ME || $('#app').classList.contains('hidden')) return;
-  if (busyUI) toast('☁️ Llegaron datos de otro dispositivo'); else render();
+  if (busyUI) { SYNC.pendRender = true; toast('☁️ Llegaron datos de otro dispositivo'); } else { SYNC.pendRender = false; render(); }
 }
 function queuePhoto(pid) { if (!SYNC.cfg) return; const q = JSON.parse(localStorage.getItem(SYNC_PHOTOS) || '[]'); if (!q.includes(pid)) { q.push(pid); localStorage.setItem(SYNC_PHOTOS, JSON.stringify(q)); } }
 function queueAllPhotos() { DB.orders.forEach(o => [...(o.photos || []), o.signature].filter(Boolean).forEach(queuePhoto)); }
@@ -1653,7 +1667,7 @@ function cloudCard() {
     <p class="text-sm text-slate-600">Este dispositivo guarda los datos solo acá. Para verlos desde otros dispositivos, abrí el <b>link de vinculación</b> que te manda el administrador del sistema, o pegalo acá:</p>
     <div class="flex gap-2 mt-3"><input id="cl-link" class="inp text-xs font-mono" placeholder="https://…#vincular=…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn btn-d" onclick="pasteLink()">Conectar</button></div></div>`;
   return `<div class="card p-5"><div class="flex justify-between items-center mb-2 gap-2"><p class="lbl"><i class="fas fa-cloud mr-1"></i>Nube del taller</p><span id="cloud-state">${cloudState()}</span></div>
-    <p class="text-sm text-slate-600">Los datos se guardan cifrados en la nube y se ven en todos los dispositivos vinculados. Se sincroniza solo cada 30 segundos y al guardar.</p>
+    <p class="text-sm text-slate-600">Los datos se guardan cifrados en la nube y se ven en todos los dispositivos vinculados. Se sincroniza sola cada 10 segundos, al guardar y al volver a la app; la pantalla se actualiza sola.</p>
     <div class="grid grid-cols-2 gap-2 mt-3"><button class="btn btn-l" onclick="syncNow(true)"><i class="fas fa-rotate"></i> Sincronizar</button><button class="btn btn-d" onclick="shareLink()"><i class="fas fa-mobile-screen"></i> Vincular otro</button></div>
     <button class="text-xs text-slate-400 underline mt-3" onclick="unlinkDevice()">Desvincular este dispositivo</button></div>`;
 }

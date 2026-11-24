@@ -1,8 +1,8 @@
 {
-  "version": "2.5.0",
+  "version": "2.5.1",
   "fecha": "2026-11-24",
   "notas": [
-    "Nube del taller: los datos se ven en todos tus dispositivos.",
+    "Sincronización con la nube cada 10 segundos y pantalla que se actualiza sola.",
     "Tus datos se conservan."
   ]
 }

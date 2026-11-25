@@ -1,8 +1,9 @@
 {
-  "version": "2.5.4",
+  "version": "2.6.0",
   "fecha": "2026-11-24",
   "notas": [
-    "Suscripción desde la portada: se ingresa primero a la cuenta.",
+    "Aviso de hasta cuándo se mantiene el plan si no hay suscripción.",
+    "Términos y condiciones actualizados.",
     "Tus datos se conservan."
   ]
 }

@@ -115,6 +115,7 @@
             <div><label class="text-xs text-slate-500">Próximo vencimiento</label><input id="c-vence" class="inp" type="date"></div>
             <div><label class="text-xs text-slate-500">Avisar desde (días antes)</label><input id="c-aviso" class="inp" type="number" inputmode="numeric" min="0"></div>
             <div><label class="text-xs text-slate-500">Días de gracia (0 = se bloquea al vencer)</label><input id="c-gracia" class="inp" type="number" inputmode="numeric" min="0"></div>
+            <label class="sm:col-span-2 flex items-center gap-3 p-3 rounded-xl bg-slate-50 text-sm font-semibold cursor-pointer"><input type="checkbox" id="c-subs" class="w-5 h-5"> Diego ya está suscripto en Mercado Pago (débito automático activo)</label>
             <div><label class="text-xs text-slate-500">Estado</label><select id="c-estado" class="inp"><option value="activo">Activo (según vencimiento)</option><option value="suspendido">Suspendido manualmente</option></select></div>
             <div class="sm:col-span-2"><label class="text-xs text-slate-500">Link de pago de Mercado Pago</label><div class="flex gap-2"><input id="c-link" class="inp font-mono text-xs" placeholder="https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=… o https://mpago.la/…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn b-l" onclick="openLink()" title="Probar"><i class="fas fa-up-right-from-square"></i></button></div></div>
             <div><label class="text-xs text-slate-500">Alias / CVU (opcional)</label><input id="c-alias" class="inp font-mono" autocapitalize="none"></div>
@@ -388,14 +389,16 @@ function show() {
   const st = state(), h = hist(), year = String(new Date().getFullYear());
   const tot = h.filter(p => p.fecha.startsWith(year)).reduce((a, p) => a + num(p.monto), 0), totNeto = h.filter(p => p.fecha.startsWith(year)).reduce((a, p) => a + num(p.neto ?? neto(p.monto)), 0);
   $('#stats').innerHTML = [
-    ['Estado', `<span class="pill ${st[1]}">${st[0]}</span><p class="text-xs text-slate-500 mt-1">${st[2]}</p>`],
+    ['Estado', `<span class="pill ${st[1]}">${st[0]}</span><p class="text-xs text-slate-500 mt-1">${st[2]}</p>
+      <p class="text-xs mt-2">Suscripción: ${LIC.suscripto ? '<b class="text-green-700">activa</b>' : '<b class="text-amber-700">no suscripto</b>'}</p>
+      <div class="grid grid-cols-2 gap-1 mt-2"><button class="btn !min-h-[34px] !py-1 !text-[11px] ${LIC.estado === 'suspendido' ? 'b-g' : 'b-r'}" onclick="toggleSusp()">${LIC.estado === 'suspendido' ? '<i class="fas fa-unlock"></i> Reactivar' : '<i class="fas fa-lock"></i> Suspender'}</button><button class="btn !min-h-[34px] !py-1 !text-[11px] b-l" onclick="toggleSubs()">${LIC.suscripto ? 'Quitar suscr.' : '<i class="fas fa-check"></i> Suscripto'}</button></div>`],
     ['Abono mensual', `<p class="text-xl sm:text-2xl font-extrabold">${num(LIC.monto) ? money(LIC.monto) : '<span class="text-amber-600 text-base">Falta cargar el precio</span>'}</p>${num(LIC.monto) ? `<p class="text-xs text-slate-500">Te llegan ${money(neto(LIC.monto))}</p>` : ''}`],
     ['Próximo vencimiento', `<p class="text-xl sm:text-2xl font-extrabold">${fd(LIC.vence)}</p>`],
     ['Cobrado en ' + year, `<p class="text-xl sm:text-2xl font-extrabold text-green-600">${money(tot)}</p><p class="text-xs text-slate-500">Neto ${money(totNeto)}</p>`]
   ].map(([l, v]) => `<div class="card p-4 min-w-0"><p class="lbl mb-2">${l}</p>${v}</div>`).join('');
   const set = (id, v) => $(id).value = v ?? '';
   set('#c-cliente', LIC.cliente); set('#c-plan', LIC.plan); set('#c-monto', LIC.monto || ''); set('#c-tasa', tasa()); set('#c-vence', LIC.vence); set('#c-aviso', LIC.avisoDias ?? 5); set('#c-gracia', LIC.gracia ?? 0);
-  set('#c-link', LIC.linkPago); set('#c-alias', LIC.alias); set('#c-wa', LIC.whatsappDueno); set('#c-tel', LIC.telefonoCliente); set('#c-estado', LIC.estado || 'activo'); set('#c-msg', LIC.mensaje);
+  set('#c-link', LIC.linkPago); set('#c-alias', LIC.alias); set('#c-wa', LIC.whatsappDueno); set('#c-tel', LIC.telefonoCliente); set('#c-estado', LIC.estado || 'activo'); $('#c-subs').checked = !!LIC.suscripto; set('#c-msg', LIC.mensaje);
   calcNeto();
   if (!$('#p-fecha').value) $('#p-fecha').value = ymd(new Date());
   $('#p-monto').value = LIC.monto || '';
@@ -449,7 +452,7 @@ const okLink = u => !u || /^https:\/\/([a-z0-9-]+\.)*(mercadopago\.com\.ar|merca
 function readForm() {
   localStorage.setItem(TASA, num($('#c-tasa').value));
   Object.assign(LIC, {cliente: $('#c-cliente').value.trim(), plan: $('#c-plan').value.trim(), monto: num($('#c-monto').value), vence: $('#c-vence').value, avisoDias: num($('#c-aviso').value), gracia: num($('#c-gracia').value),
-    linkPago: $('#c-link').value.trim(), alias: $('#c-alias').value.trim(), whatsappDueno: $('#c-wa').value.trim(), telefonoCliente: $('#c-tel').value.trim(), estado: $('#c-estado').value, mensaje: $('#c-msg').value.trim()});
+    linkPago: $('#c-link').value.trim(), alias: $('#c-alias').value.trim(), whatsappDueno: $('#c-wa').value.trim(), telefonoCliente: $('#c-tel').value.trim(), estado: $('#c-estado').value, suscripto: $('#c-subs').checked, mensaje: $('#c-msg').value.trim()});
   if (LIC.vence) LIC.diaVencimiento = new Date(LIC.vence + 'T12:00').getDate();
 }
 async function run(fn, okMsg) { try { await fn(); show(); toast(okMsg); } catch (e) { toast(e.message, 6000); show(); } }
@@ -479,8 +482,15 @@ function registerPay() {
 function toggleSusp() {
   if (needKey()) return;
   const s = LIC.estado === 'suspendido';
-  if (!confirm(s ? '¿Reactivar el sistema de Diego?' : '¿Suspender el sistema de Diego ahora? Sus datos no se borran; solo no podrá usarlo hasta que lo reactives.')) return;
-  LIC.estado = s ? 'activo' : 'suspendido'; run(() => publish(s ? 'Abono: sistema reactivado' : 'Abono: sistema suspendido'), s ? 'Sistema reactivado' : 'Sistema suspendido');
+  const vencido = LIC.vence && LIC.vence < ymd(new Date());
+  if (!confirm(s ? '¿Reactivar el sistema de Diego?' + (vencido ? '\n\nOjo: el vencimiento (' + fd(LIC.vence) + ') ya pasó, así que va a seguir bloqueado por fecha. Registrá un pago o cambiá el vencimiento.' : '') : '¿Suspender el sistema de Diego ahora? Sus datos no se borran; solo no podrá usarlo hasta que lo reactives.')) return;
+  LIC.estado = s ? 'activo' : 'suspendido'; run(() => publish(s ? 'Abono: sistema reactivado' : 'Abono: sistema suspendido'), s ? 'Sistema reactivado. Diego lo ve en 1 o 2 minutos.' : 'Sistema suspendido. Diego lo ve en 1 o 2 minutos.');
+}
+function toggleSubs() {
+  if (needKey()) return;
+  const v = !LIC.suscripto;
+  if (!confirm(v ? '¿Marcar que Diego ya está suscripto en Mercado Pago? Deja de ver el aviso de «plan vigente hasta…».' : '¿Marcar que Diego NO está suscripto? Va a ver el aviso de hasta qué fecha mantiene el plan.')) return;
+  LIC.suscripto = v; run(() => publish(v ? 'Abono: suscripción activa' : 'Abono: sin suscripción'), v ? 'Marcado como suscripto' : 'Marcado como no suscripto');
 }
 function waNum(p) { let d = String(p || '').replace(/\D/g, ''); if (!d) return ''; if (d.startsWith('54')) return d; return '549' + d.replace(/^0/, '').replace(/^(\d{2,4})15(\d{6,8})$/, '$1$2'); }
 function openWA(tel, t) { window.open('https://wa.me/' + waNum(tel) + '?text=' + encodeURIComponent(t), '_blank', 'noopener'); }

@@ -190,7 +190,7 @@
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.5.4';
+const APP_VERSION = '2.6.0';
 const SCHEMA = 2;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -523,7 +523,7 @@ function showApp() {
   if (needLegal()) showLegal(); else if (needAbonoAviso()) showAbonoAviso(); else setTimeout(postLoginSub, 300);
 }
 /* Términos y condiciones + política de cookies: se aceptan una sola vez (se vuelve a pedir solo si cambian). */
-const LEGAL_VERSION = '2026-11-24';
+const LEGAL_VERSION = '2026-11-24b';   // términos actualizados: suspensión al vencer sin suscripción
 const needLegal = () => !(DB.legal && DB.legal.version === LEGAL_VERSION);
 function showLegal() {
   modal(`<div id="legal-box" class="p-6 sm:p-8">
@@ -558,7 +558,7 @@ function showAbonoAviso() {
       <ul class="space-y-2">
         <li class="flex gap-2"><i class="fas fa-circle-check text-green-600 mt-0.5"></i><span>Incluye todas las funciones, las actualizaciones y la nube para ver los datos en todos tus dispositivos.</span></li>
         <li class="flex gap-2"><i class="fas fa-circle-check text-green-600 mt-0.5"></i><span>${subs ? 'Se paga con Mercado Pago y se debita solo cada mes; podés cancelarlo cuando quieras.' : 'Se paga con Mercado Pago, de forma simple y segura.'}</span></li>
-        ${LIC && LIC.vence ? `<li class="flex gap-2"><i class="fas fa-calendar-day text-brand-600 mt-0.5"></i><span>Primer vencimiento: <b>${licVence()}</b>. Si el abono no se paga, el sistema se pausa hasta regularizarlo; <b>tus datos nunca se borran</b>.</span></li>` : ''}
+        ${LIC && LIC.vence ? `<li class="flex gap-2"><i class="fas fa-calendar-day text-brand-600 mt-0.5"></i><span>${isSubscribed() ? 'Próximo vencimiento: <b>' + licVence() + '</b>.' : 'Tu plan actual se mantiene hasta el <b>' + licVence() + '</b>. Si no te suscribís antes, al día siguiente el sistema se suspende'}; <b>tus datos nunca se borran</b>.</span></li>` : ''}
       </ul>
       <div class="grid gap-2 pt-2">
         ${LIC && LIC.linkPago ? `<button class="btn text-white py-3" style="background:#009ee3" onclick="payLic()"><span class="mp-logo" style="--mc:#fff;color:#009ee3;background:#fff">MP</span> ${subs ? 'Suscribirme con Mercado Pago' : 'Pagar con Mercado Pago'}</button>` : ''}
@@ -577,7 +577,7 @@ function loginAviso() {
     <div class="flex-1 min-w-[200px]">
       <p class="eyebrow !text-white/60">Novedad importante</p>
       <p class="font-extrabold text-lg leading-snug mt-0.5">A partir de ahora, el sistema pasa a un abono mensual${m ? ` de <span class="whitespace-nowrap">${money(LIC.monto)}</span>` : ''}.</p>
-      <p class="text-sm text-white/70 mt-1">Incluye todas las funciones, las actualizaciones y la nube. Se paga con Mercado Pago${licSubs() ? ' y se debita solo cada mes' : ''}. Tus datos están seguros y no se borran.</p>
+      <p class="text-sm text-white/70 mt-1">Incluye todas las funciones, las actualizaciones y la nube. Se paga con Mercado Pago${licSubs() ? ' y se debita solo cada mes' : ''}.${LIC && LIC.vence && !isSubscribed() ? ` El plan actual se mantiene hasta el <b class="text-white">${licVence()}</b>; si no te suscribís, al día siguiente el sistema se suspende.` : ''} Tus datos están seguros y no se borran.</p>
     </div>
     <div class="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto">
       ${LIC && LIC.linkPago ? `<button class="btn text-white px-2 text-[13px] sm:text-sm" style="background:#009ee3" onclick="subFromHome()"><span class="mp-logo" style="--mc:#fff;color:#009ee3;background:#fff">MP</span> ${licSubs() ? 'Suscribirme' : 'Pagar'}</button>` : ''}
@@ -609,7 +609,8 @@ function postLoginSub(force) {
     ${num(LIC.monto) ? `<p class="text-center py-2"><span class="text-4xl font-extrabold">${money(LIC.monto)}</span><span class="text-slate-500"> /mes</span></p>` : ''}
     <p class="text-slate-600">${subs ? 'Te vamos a llevar a Mercado Pago para que elijas tu medio de pago. El abono se debita solo cada mes y lo podés cancelar cuando quieras.' : 'Te vamos a llevar a Mercado Pago para que pagues el abono del mes.'}</p>
     <button class="btn text-white w-full py-3" style="background:#009ee3" onclick="closeModal();payLic()"><span class="mp-logo" style="--mc:#fff;color:#009ee3;background:#fff">MP</span> ${subs ? 'Suscribirme con Mercado Pago' : 'Pagar con Mercado Pago'}</button>
-    <button class="btn btn-l w-full" onclick="closeModal()">Ahora no</button></div>`);
+    ${!isSubscribed() && LIC.vence ? `<p class="text-xs p-2 rounded-lg bg-amber-50 text-amber-800">${subsWarn(licState())}</p>` : ''}
+    <button class="btn btn-l w-full" onclick="closeModal();${!isSubscribed() && LIC.vence ? `toast('Tu plan se mantiene hasta el ${licVence()}. Después se suspende si no te suscribís.', 6000)` : ''}">Ahora no</button></div>`);
 }
 function ackAbonoAviso() {
   DB.avisos = Object.assign({}, DB.avisos, {abono: {ts: Date.now(), por: ME.id, nombre: ME.name}}); save();
@@ -1562,9 +1563,19 @@ function paidLic() {
   const tel = LIC && LIC.whatsappDueno; if (!tel) return toast('No hay WhatsApp cargado del administrador.');
   openWA(tel, `Hola! Soy ${DB.config.titular} (${DB.config.nombre}). Ya pagué el abono del sistema que vencía el ${licVence()}. Te envío el comprobante.`);
 }
+function subsWarn(st) {   // no está suscripto: hasta cuándo mantiene el plan
+  const d = st.d >= 0 ? (st.d === 0 ? 'hoy' : st.d === 1 ? 'mañana' : 'en ' + st.d + ' días') : '';
+  return `Tu plan se mantiene hasta el <b>${licVence()}</b>${d ? ' (' + d + ')' : ''}. Si no te suscribís, al día siguiente el sistema se suspende.`;
+}
+const isSubscribed = () => LIC && LIC.suscripto === true;
+function subscribedLic() {
+  const tel = LIC && LIC.whatsappDueno; if (!tel) return toast('No hay WhatsApp cargado del administrador.');
+  openWA(tel, `Hola! Soy ${DB.config.titular} (${DB.config.nombre}). Ya me suscribí al abono del sistema con Mercado Pago.`);
+}
 function licBanner() {
   if (!LIC || !isAdmin()) return '';
   const st = licState();
+  if (!isSubscribed() && LIC.vence && (st.s === 'ok' || st.s === 'proximo') && LIC.linkPago) return `<div class="card p-4 mb-4 ${st.s === 'proximo' ? 'border-amber-300 bg-amber-50' : 'border-sky-200 bg-sky-50'} flex flex-wrap items-center gap-3 text-sm"><i class="fas fa-calendar-day ${st.s === 'proximo' ? 'text-amber-600' : 'text-sky-600'}"></i><div class="flex-1 min-w-[200px]"><b>Todavía no te suscribiste al abono mensual${num(LIC.monto) ? ' (' + money(LIC.monto) + '/mes)' : ''}.</b><br>${subsWarn(st)}</div><button class="btn btn-sm text-white" style="background:#009ee3" onclick="payLic()"><span class="mp-logo" style="--mc:#fff;color:#009ee3;background:#fff">MP</span> Suscribirme</button><button class="btn btn-l btn-sm" onclick="subscribedLic()">Ya me suscribí</button></div>`;
   if (st.s === 'proximo') return `<div class="card p-4 mb-4 border-amber-300 bg-amber-50 flex flex-wrap items-center gap-3 text-sm"><i class="fas fa-calendar-day text-amber-600"></i><div class="flex-1 min-w-[200px]"><b>El abono del sistema vence ${st.d === 0 ? 'hoy' : st.d === 1 ? 'mañana' : 'en ' + st.d + ' días'}</b> (${licVence()})${num(LIC.monto) ? ' · ' + money(LIC.monto) : ''}</div><button class="btn btn-sm text-white" style="background:#009ee3" onclick="payLic()"><i class="fas fa-credit-card"></i> Pagar con Mercado Pago</button></div>`;
   if (st.s === 'gracia') return `<div class="card p-4 mb-4 border-red-300 bg-red-50 flex flex-wrap items-center gap-3 text-sm"><i class="fas fa-triangle-exclamation text-red-600"></i><div class="flex-1 min-w-[200px]"><b>El abono del sistema venció el ${licVence()}.</b> Quedan ${st.resta === 0 ? 'menos de 1 día' : st.resta + ' día(s)'} antes de que se suspenda el uso. Tus datos no se pierden.</div><button class="btn btn-sm text-white" style="background:#009ee3" onclick="payLic()"><i class="fas fa-credit-card"></i> Pagar ${num(LIC.monto) ? money(LIC.monto) : ''}</button><button class="btn btn-l btn-sm" onclick="paidLic()">Ya pagué</button></div>`;
   return '';
@@ -1584,8 +1595,9 @@ function licCard() {
     <div class="p-5">
       <div class="grid grid-cols-2 gap-3 text-sm">
         <div><p class="lbl !text-[9px]">Próximo vencimiento</p><p class="font-bold">${licVence()}</p>${dias ? `<p class="text-xs text-slate-500">${dias}</p>` : ''}</div>
-        <div><p class="lbl !text-[9px]">Forma de pago</p><p class="font-bold">${subs ? 'Débito automático' : 'Mercado Pago'}</p><p class="text-xs text-slate-500">${subs ? 'suscripción mensual' : 'pago mensual'}</p></div>
+        <div><p class="lbl !text-[9px]">Suscripción</p><p class="font-bold">${isSubscribed() ? '<span class="text-green-700">Activa</span>' : '<span class="text-amber-700">Sin suscribir</span>'}</p><p class="text-xs text-slate-500">${subs ? 'débito automático con Mercado Pago' : 'pago mensual con Mercado Pago'}</p></div>
       </div>
+      ${!isSubscribed() && LIC.vence && st.s !== 'bloqueado' ? `<p class="text-xs mt-3 p-2 rounded-lg bg-amber-50 text-amber-800"><i class="fas fa-circle-exclamation mr-1"></i>${subsWarn(st)}</p>` : ''}
       ${LIC.ultimoPago ? `<p class="text-xs text-slate-500 mt-3"><i class="fas fa-circle-check text-green-600 mr-1"></i>Último pago: ${esc(LIC.ultimoPago.fecha ? fDate(new Date(LIC.ultimoPago.fecha + 'T12:00').getTime()) : '')}${LIC.ultimoPago.periodo ? ' · ' + esc(LIC.ultimoPago.periodo) : ''}</p>` : ''}
       <button class="btn w-full mt-4 text-white" style="background:#009ee3" onclick="payLic()"><span class="mp-logo" style="--mc:#fff;color:#009ee3;background:#fff">MP</span> ${subs ? 'Suscribirme / ver mi suscripción' : 'Pagar con Mercado Pago'}</button>
       <button class="btn btn-l w-full mt-2" onclick="paidLic()"><i class="fab fa-whatsapp text-green-600"></i> Ya pagué — avisar</button>
@@ -1598,7 +1610,7 @@ function showLock() {
   const st = licState();
   modal(`<div id="lock-box" class="p-6 sm:p-8 text-center">
     <div class="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4"><i class="fas fa-lock fa-2x"></i></div>
-    <p class="eyebrow">${st.motivo === 'sinverificar' ? 'Sin verificar' : st.motivo === 'invalida' ? 'Licencia no válida' : st.suspendido ? 'Servicio suspendido' : 'Abono vencido el ' + licVence()}</p>
+    <p class="eyebrow">${st.motivo === 'sinverificar' ? 'Sin verificar' : st.motivo === 'invalida' ? 'Licencia no válida' : st.suspendido ? 'Servicio suspendido' : (isSubscribed() ? 'Abono vencido el ' : 'Plan vencido el ') + licVence()}</p>
     <h2 class="text-2xl font-extrabold mt-2">El uso del sistema está en pausa</h2>
     <p class="text-slate-500 mt-3">${st.motivo === 'sinverificar' ? 'Hace más de 3 días que no se puede verificar el abono. Conectate a internet y tocá «volver a verificar».' : st.motivo === 'invalida' ? 'No se pudo validar la licencia del sistema. Comunicate con el administrador.' : esc((LIC && LIC.mensaje) || 'Para seguir usando el sistema hay que pagar el abono mensual.')}</p>
     ${LIC && num(LIC.monto) && !st.motivo ? `<p class="text-3xl font-extrabold mt-4">${money(LIC.monto)}</p>` : ''}

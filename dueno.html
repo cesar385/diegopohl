@@ -161,6 +161,7 @@
           <button id="btn-susp" class="btn b-r w-full" onclick="toggleSusp()"></button>
           <a class="btn b-l w-full" href="./" target="_blank" rel="noopener"><i class="fas fa-eye"></i> Ver el sistema de Diego</a>
           <button class="btn b-l w-full" onclick="changeAccess()"><i class="fas fa-user-gear"></i> Cambiar mi usuario o contraseña</button>
+          <button class="btn b-l w-full" onclick="updateMyToken()"><i class="fas fa-key"></i> Actualizar mi token de GitHub</button>
         </div>
         <div class="card p-5 space-y-2" id="nube-card"></div>
         <div class="card p-5 space-y-2">
@@ -416,7 +417,7 @@ function drawNube() {
     <div class="flex justify-center"><div id="nube-qr" class="p-2 bg-white border rounded-xl"></div></div>
     <button class="btn b-l w-full" onclick="navigator.clipboard.writeText(nubeLink()).then(()=>toast('Link copiado'))"><i class="fas fa-copy"></i> Copiar link de vinculación</button>
     <button class="btn b-g w-full" onclick="openWA(LIC.telefonoCliente,'Hola Diego! Abrí este link en cada celular o computadora donde quieras ver los datos del taller (no lo compartas con nadie):\\n'+nubeLink())"><i class="fab fa-whatsapp"></i> Enviar link a Diego</button>
-    <details class="text-xs text-slate-500"><summary class="underline cursor-pointer">Cambiar el token de la nube</summary><input id="nb-tok" class="inp font-mono mt-2" type="password" placeholder="github_pat_… nuevo"><button class="btn b-l w-full mt-2" onclick="saveNube(true)">Guardar token nuevo</button><p class="mt-1">La clave de cifrado no cambia; después reenviá el link a cada dispositivo.</p></details>`;
+    <details class="text-xs text-slate-500"><summary class="underline cursor-pointer">Cambiar o renovar el token de la nube</summary><input id="nb-tok" class="inp font-mono mt-2" type="password" placeholder="github_pat_… nuevo"><button class="btn b-l w-full mt-2" onclick="saveNube(true)">Guardar token nuevo</button><p class="mt-1">Los dispositivos ya vinculados toman el token nuevo solos; no hace falta reenviar el link.</p></details>`;
     try { new QRCode($('#nube-qr'), {text: nubeLink(), width: 180, height: 180, correctLevel: QRCode.CorrectLevel.L}); } catch (e) { $('#nube-qr').remove(); }
     return; }
   el.innerHTML = `<p class="lbl mb-1"><i class="fas fa-cloud mr-1"></i>Nube del taller</p>
@@ -430,6 +431,17 @@ function drawNube() {
     <input id="nb-tok" class="inp font-mono" type="password" placeholder="github_pat_… (token de la nube)">
     <button class="btn b-d w-full" onclick="saveNube()"><i class="fas fa-cloud-arrow-up"></i> Activar la nube</button>`;
 }
+async function publishCloudToken() {   // token nuevo cifrado con la clave de los datos: los dispositivos lo toman solos
+  const key = await crypto.subtle.importKey('raw', fromB(NUBE.k), 'AES-GCM', false, ['encrypt']); const iv = rnd(12);
+  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, key, new TextEncoder().encode(JSON.stringify({r: NUBE.r, t: NUBE.t, ts: Date.now()})));
+  const f = await getFile('nube-token.json'); await putFile('nube-token.json', JSON.stringify({v: 1, iv: toB(iv), ct: toB(ct)}) + '\n', 'Nube: token cifrado', f && f.sha);
+}
+async function updateMyToken() {
+  const t = prompt('Pegá tu token de GitHub nuevo (el del panel, con acceso a diegopohl)'); if (!t) return;
+  const old = TOKEN; TOKEN = t.trim();
+  try { await load(); await storeAccess(); show(); toast('Token del panel actualizado'); }
+  catch (e) { TOKEN = old; toast(e.message, 8000); }
+}
 async function saveNube(onlyToken) {
   const t = $('#nb-tok').value.trim(); if (!t) return toast('Pegá el token de la nube');
   const r = onlyToken ? NUBE.r : ($('#nb-repo').value.trim() || 'cesar385/diegopohl-datos');
@@ -439,7 +451,8 @@ async function saveNube(onlyToken) {
     if (!res.ok) throw new Error('El token no tiene acceso a ' + r + ' (¿creaste el repo y elegiste ese repo en el token?)');
     const j = await res.json(); if (!j.private) throw new Error('El repositorio ' + r + ' tiene que ser PRIVADO');
     NUBE = {r, t, k: NUBE ? NUBE.k : toB(rnd(32))};
-    await storeAccess(); drawNube(); toast('Nube activada. Mandale el link a Diego.', 6000);
+    await storeAccess(); await publishCloudToken(); drawNube();
+    toast(onlyToken ? 'Token de la nube actualizado. Los dispositivos de Diego lo toman solos, sin volver a vincular.' : 'Nube activada. Mandale el link a Diego.', 7000);
   } catch (e) { toast(e.message, 8000); }
 }
 function addMonths(s, n, day) {

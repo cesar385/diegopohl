@@ -190,7 +190,7 @@
       Los usuarios verán el aviso "Hay una actualización" y al aceptar
       se guarda un respaldo antes de recargar.
    ===================================================================== */
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.6.1';
 const SCHEMA = 2;
 const KEY = 'pohl_taller';                 // datos del sistema nuevo
 const LEGACY_KEY = 'pohl_v6';              // presupuestos de la versión anterior (no se borra nunca)
@@ -1688,6 +1688,17 @@ function merge3(B, L, R) {
   M.products.forEach(p => { const mv = M.moves.filter(m => m.pid === p.id); if (mv.length) p.stock = mv.reduce((a, m) => a + num(m.qty), 0); });
   return migrate(M);
 }
+/* Token de la nube renovable sin volver a vincular: el panel del dueño publica el token nuevo
+   en nube-token.json cifrado con la misma clave de los datos (que solo tienen los dispositivos vinculados). */
+async function refreshCloudToken() {
+  try {
+    const r = await fetch('nube-token.json?t=' + Date.now(), {cache: 'no-store'}); if (!r.ok) return false;
+    const d = await dec(await r.text());
+    if (!d.t || d.t === SYNC.cfg.t) return false;
+    SYNC.cfg = {...SYNC.cfg, t: d.t, r: d.r || SYNC.cfg.r}; localStorage.setItem(SYNC_KEY, JSON.stringify(SYNC.cfg)); SYNC.etag = null;
+    return true;
+  } catch (e) { return false; }
+}
 function scheduleSync(ms = 1200) { clearTimeout(SYNC.timer); SYNC.timer = setTimeout(() => syncNow(), ms); }
 async function syncNow(manual) {
   if (!SYNC.cfg) return;
@@ -1713,8 +1724,9 @@ async function syncNow(manual) {
       break;
     }
     await uploadPhotos();
-    SYNC.err = ''; localStorage.setItem(SYNC_LAST, Date.now());
+    SYNC.err = ''; SYNC.refreshed = false; localStorage.setItem(SYNC_LAST, Date.now());
   } catch (e) {
+    if ((e.status === 401 || e.status === 403) && !SYNC.refreshed && await refreshCloudToken()) { SYNC.busy = false; SYNC.refreshed = true; return syncNow(manual); }
     SYNC.err = e.status === 401 ? 'El acceso a la nube venció o fue revocado' : e.status === 403 || e.status === 404 ? 'Sin permiso sobre el repositorio de datos' : e.name === 'OperationError' ? 'La clave de la nube no coincide' : 'Sin conexión con la nube';
     if (manual) toast('⚠️ ' + SYNC.err, 5000);
   }

@@ -1,9 +1,8 @@
 {
-  "version": "2.6.0",
+  "version": "2.6.1",
   "fecha": "2026-11-24",
   "notas": [
-    "Aviso de hasta cuándo se mantiene el plan si no hay suscripción.",
-    "Términos y condiciones actualizados.",
+    "La nube toma sola el token renovado.",
     "Tus datos se conservan."
   ]
 }
